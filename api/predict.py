@@ -402,6 +402,9 @@ def handler(request, response):
 
         return response
 
+app = handler
+application = handler
+
 if __name__ == '__main__':
     result = predict_from_bbox(-62.45, -27.65, -62.44, -27.64, "2022-11-01", "2023-04-30")  
     print(json.dumps(result, indent=2))
