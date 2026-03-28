@@ -11,6 +11,7 @@ import { useFields } from "@/context/FieldsContext";
 import { FieldChatPanel } from "./FieldChatPanel";
 import { useFieldWeather } from "@/hooks/use-field-weather";
 import { CreditRiskPanel } from "./CreditRiskPanel";
+import { FieldSatelliteMap } from "./FieldSatelliteMap";
 
 type LenderReportData = {
   provider: {
@@ -681,6 +682,25 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
         </div>
 
         <CreditRiskPanel field={field} weatherRiskScore={weatherData?.metrics.riskScore ?? null} />
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Imagen satelital del campo</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Vista interactiva con el area estimada del lote para validacion visual.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <FieldSatelliteMap
+              latitude={field.latitude}
+              longitude={field.longitude}
+              bboxMinLon={field.bboxMinLon}
+              bboxMinLat={field.bboxMinLat}
+              bboxMaxLon={field.bboxMaxLon}
+              bboxMaxLat={field.bboxMaxLat}
+            />
+          </CardContent>
+        </Card>
 
         {/* Chart */}
         <Card>
