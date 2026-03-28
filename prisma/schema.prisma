@@ -8,16 +8,18 @@ datasource db {
 }
 
 model AppUser {
-  id            String         @id @db.Uuid
-  email         String         @unique
-  role          Role           @default(USER)
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  name          String?
-  farmName      String?        @map("farm_name")
-  fields        Field[]
-  weatherAlerts WeatherAlert[]
-  todos         Todo[]
+  id                String           @id @db.Uuid
+  email             String           @unique
+  role              Role             @default(USER)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  name              String?
+  farmName          String?          @map("farm_name")
+  fields            Field[]
+  weatherAlerts     WeatherAlert[]
+  todos             Todo[]
+  creditBatchRuns   CreditBatchRun[]
+  creditDecisions   CreditDecision[]
 
   @@map("app_users")
 }
@@ -46,6 +48,7 @@ model Field {
   createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
   predictionSnapshots  PredictionSnapshot[]
+  creditDecisions      CreditDecision[]
   user                 AppUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
   alertLinks           AlertField[]
 
@@ -126,4 +129,69 @@ model Todo {
 enum Role {
   USER
   ADMIN
+}
+
+enum CreditRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum CreditDecisionOutcome {
+  APPROVED
+  REJECTED
+}
+
+model CreditBatchRun {
+  id            String                @id @default(cuid())
+  runKey        String                @unique @map("run_key")
+  engineVersion String                @map("engine_version")
+  status        CreditRunStatus       @default(RUNNING)
+  requestedById String?               @map("requested_by_id") @db.Uuid
+  notes         String?
+  requestedAt   DateTime              @default(now()) @map("requested_at") @db.Timestamptz(6)
+  startedAt     DateTime              @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt    DateTime?             @map("finished_at") @db.Timestamptz(6)
+  fieldsChecked Int                   @default(0) @map("fields_checked")
+  processed     Int                   @default(0)
+  approved      Int                   @default(0)
+  rejected      Int                   @default(0)
+  skipped       Int                   @default(0)
+  failed        Int                   @default(0)
+  metadata      Json?
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  requestedBy   AppUser?              @relation(fields: [requestedById], references: [id], onDelete: SetNull)
+  decisions     CreditDecision[]
+
+  @@index([requestedById])
+  @@index([requestedAt])
+  @@index([status])
+  @@map("credit_batch_runs")
+}
+
+model CreditDecision {
+  id                   String                 @id @default(cuid())
+  runId                String                 @map("run_id")
+  fieldId              String                 @map("field_id")
+  userId               String                 @map("user_id") @db.Uuid
+  predictionSnapshotId String?                @map("prediction_snapshot_id")
+  decision             CreditDecisionOutcome
+  score                Float
+  confidence           Float                  @default(0)
+  decisionReason       String                 @map("decision_reason")
+  reasonCodes          String[]               @default([]) @map("reason_codes")
+  featureSnapshot      Json                   @map("feature_snapshot")
+  sourceSnapshot       Json                   @map("source_snapshot")
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  run                  CreditBatchRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  field                Field                  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  user                 AppUser                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, fieldId])
+  @@index([fieldId])
+  @@index([userId])
+  @@index([decision])
+  @@index([createdAt])
+  @@map("credit_decisions")
 }

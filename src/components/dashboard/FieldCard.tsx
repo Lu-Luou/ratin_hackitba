@@ -2,6 +2,8 @@ import type { FieldProfile } from "@/types/field";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFieldWeather } from "@/hooks/use-field-weather";
+import { WeatherIndicator } from "@/components/field/WeatherIndicator";
 
 function scoreColor(score: number) {
   if (score >= 80) return "text-success";
@@ -17,6 +19,7 @@ function scoreBg(score: number) {
 
 export function FieldCard({ field, onClick }: { field: FieldProfile; onClick: () => void }) {
   const positive = field.monthlyRevenueChange >= 0;
+  const { data: weather, loading: weatherLoading, error: weatherError } = useFieldWeather(field.id);
 
   return (
     <Card
@@ -55,6 +58,8 @@ export function FieldCard({ field, onClick }: { field: FieldProfile; onClick: ()
             </p>
           </div>
         ) : null}
+
+        <WeatherIndicator weather={weather ?? null} loading={weatherLoading} error={weatherError} compact={true} />
       </CardContent>
     </Card>
   );
