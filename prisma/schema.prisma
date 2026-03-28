@@ -27,6 +27,7 @@ model AppUser {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   todos     Todo[]
   fields    Field[]
+  weatherAlerts WeatherAlert[]
 
   @@map("app_users")
 }
@@ -50,10 +51,44 @@ model Field {
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   user                 AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertLinks           AlertField[]
 
   @@index([userId])
   @@index([createdAt])
   @@map("fields")
+}
+
+model WeatherAlert {
+  id                 String      @id @default(cuid())
+  userId             String      @map("user_id") @db.Uuid
+  relevanceScore     Int         @default(0) @map("relevance_score")
+  priorityScore      Int         @default(0) @map("priority_score")
+  location           String      @db.Text
+  latitude           Float?      @db.DoublePrecision
+  longitude          Float?      @db.DoublePrecision
+  description        String      @db.Text
+  extractedVariables Json        @map("extracted_variables")
+  issuedAt           DateTime    @default(now()) @map("issued_at") @db.Timestamptz(6)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               AppUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  affectedFields     AlertField[]
+
+  @@index([userId])
+  @@index([issuedAt])
+  @@map("weather_alerts")
+}
+
+model AlertField {
+  alertId   String       @map("alert_id")
+  fieldId   String       @map("field_id")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  alert     WeatherAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  field     Field        @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@id([alertId, fieldId])
+  @@index([fieldId])
+  @@map("alert_fields")
 }
 
 model Todo {
