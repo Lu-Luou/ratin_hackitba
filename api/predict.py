@@ -14,7 +14,7 @@ MODEL_PATH = os.path.join(MODELS_DIR, 'ar_yield_regressor.joblib')
 FEATURE_META_PATH = os.path.join(MODELS_DIR, 'feature_columns.json')
 
 # ── Sentinel Hub credentials ───────────────────────────────────────────────────
-config = SHConfig()
+config = SHConfig(use_defaults=True)
 config.sh_client_id = 'f144b005-274c-4357-9333-8b51978ab22c'
 config.sh_client_secret = 'elQoOYvb1WRfkXI6n7ftoT9zsGXK0G1c'
 
