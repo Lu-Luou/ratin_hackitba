@@ -40,8 +40,23 @@ export async function signUp(formData: FormData) {
   try {
     await registerWithEmailPassword(email, password);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    console.error("[auth][signUp] Register failed", {
+      email,
+      isSessionError: error instanceof SessionError,
+      status: error instanceof SessionError ? error.status : undefined,
+      message,
+    });
+
     if (error instanceof SessionError) {
       redirectWithMessage(error.message);
+    }
+
+    if (message.includes("ENETUNREACH")) {
+      redirectWithMessage(
+        "No se pudo conectar a la base de datos. Configura DATABASE_URL_POOLER con la URL de Pooler de Supabase.",
+      );
     }
 
     redirectWithMessage("No se pudo crear la cuenta.");

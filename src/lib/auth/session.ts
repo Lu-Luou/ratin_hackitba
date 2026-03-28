@@ -134,6 +134,11 @@ export async function registerWithEmailPassword(email: string, password: string)
   const role = await resolveDefaultRole();
   const adminClient = createSupabaseAdminClient();
 
+  console.info("[auth][register] Attempting user creation", {
+    email: normalizedEmail,
+    requestedRole: role,
+  });
+
   const {
     data: { user },
     error,
@@ -147,6 +152,13 @@ export async function registerWithEmailPassword(email: string, password: string)
   });
 
   if (error || !user) {
+    console.error("[auth][register] Supabase admin.createUser failed", {
+      email: normalizedEmail,
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+    });
+
     const message = error?.message?.toLowerCase().includes("already")
       ? "Ese email ya esta registrado."
       : (error?.message ?? "No se pudo crear la cuenta.");
@@ -154,7 +166,17 @@ export async function registerWithEmailPassword(email: string, password: string)
     throw new SessionError(status, message);
   }
 
+  console.info("[auth][register] Supabase user created", {
+    userId: user.id,
+    email: normalizedEmail,
+  });
+
   const appUser = await ensureAppUser(user, role);
+
+  console.info("[auth][register] Prisma app user ensured", {
+    userId: appUser.id,
+    role: appUser.role,
+  });
 
   const supabase = await createSupabaseServerClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -163,8 +185,21 @@ export async function registerWithEmailPassword(email: string, password: string)
   });
 
   if (signInError) {
+    console.error("[auth][register] Automatic sign-in failed", {
+      userId: user.id,
+      email: normalizedEmail,
+      message: signInError.message,
+      code: signInError.code,
+      status: signInError.status,
+    });
+
     throw new SessionError(500, "Cuenta creada, pero no se pudo iniciar sesion automaticamente.");
   }
+
+  console.info("[auth][register] Automatic sign-in succeeded", {
+    userId: user.id,
+    email: normalizedEmail,
+  });
 
   return {
     authUser: user,
