@@ -318,25 +318,6 @@ export default function CampoIALogin() {
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="divider-text">Or continue with</div>
-
-            {/* Social */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <button className="btn-social">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAt_5otPUPdDhKsROdHDFulLlHQOqXDlwf5IlrHiV4Hx2hHy9gOr0z32S0s4aBi8IBSgK2ofZbDWZydhKXwpCWvWN7wKS_39b2cahfTRreZaPqFfCigSx0mbf8TCE4AC4rYInQwLBPhq0TfzKf2ucXV52gKhCHALuEQi6a3ws2nLkpO8wu_ZzD3nKnu_LTjBINg9di4tKFLdQXUagkeO85_PE4DfBCKQ5xgpwVa5gJVMhhWhD-_JW5FGl5EHE9jKK-uAbasR5qMUeU"
-                  alt="Google"
-                  style={{ width: "1.25rem", height: "1.25rem" }}
-                />
-                Google
-              </button>
-              <button className="btn-social">
-                <Icon name="ios" fill={1} style={{ fontSize: "1.25rem" }} />
-                Apple
-              </button>
-            </div>
-
             {/* Footer */}
             <p style={{ textAlign: "center", color: "var(--c-on-surface-variant)", fontSize: "0.95rem" }}>
               New to the field?{" "}
