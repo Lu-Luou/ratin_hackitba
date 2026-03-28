@@ -14,7 +14,7 @@ interface FieldInsightsAppProps {
 export function FieldInsightsApp({ view }: FieldInsightsAppProps) {
   return (
     <FieldsProvider>
-      <AppLayout>
+      <AppLayout showFilters={view === "dashboard"}>
         {(filter) => (view === "dashboard" ? <DashboardPage filter={filter} /> : <AssistantPage />)}
       </AppLayout>
     </FieldsProvider>

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, MessageCircle, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ export function TopBar() {
   return (
     <header className="h-14 border-b flex items-center justify-between px-4 bg-card">
       <div className="flex items-center gap-4">
-        <SidebarTrigger className="text-foreground" />
         <h1 className="text-lg font-display font-bold text-primary tracking-tight">The Precision Estate</h1>
       </div>
 

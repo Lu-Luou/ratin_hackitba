@@ -1,14 +1,6 @@
-import { Clock, TrendingUp, AlertTriangle, MapPin } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
+import { AlertTriangle, Clock, ListFilter, MapPin, TrendingUp } from "lucide-react";
+
+import { MenuContainer, MenuItem } from "@/components/ui/fluid-menu";
 
 const filters = [
   { title: "Recientes", icon: Clock, value: "recent" },
@@ -24,28 +16,24 @@ interface AppSidebarProps {
 
 export function AppSidebar({ activeFilter, onFilterChange }: AppSidebarProps) {
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Filtros</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filters.map((item) => (
-                <SidebarMenuItem key={item.value}>
-                  <SidebarMenuButton
-                    onClick={() => onFilterChange(activeFilter === item.value ? "" : item.value)}
-                    isActive={activeFilter === item.value}
-                    tooltip={item.title}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <div className="fixed left-4 top-20 z-40">
+      <MenuContainer>
+        <MenuItem
+          icon={<ListFilter className="h-5 w-5" />}
+          isActive={Boolean(activeFilter)}
+          label={activeFilter ? "Filtro activo" : "Abrir filtros"}
+        />
+
+        {filters.map((item) => (
+          <MenuItem
+            key={item.value}
+            onClick={() => onFilterChange(activeFilter === item.value ? "" : item.value)}
+            isActive={activeFilter === item.value}
+            icon={<item.icon className="h-5 w-5" />}
+            label={item.title}
+          />
+        ))}
+      </MenuContainer>
+    </div>
   );
 }
