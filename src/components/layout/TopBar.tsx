@@ -139,7 +139,7 @@ export function TopBar() {
   return (
     <header className="h-14 border-b flex items-center justify-between px-4 bg-card">
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-display font-bold text-primary tracking-tight">The Precision Estate</h1>
+        <h1 className="text-lg font-display font-bold text-primary tracking-tight">SoyGuardian</h1>
       </div>
 
       <nav className="flex items-center gap-1">

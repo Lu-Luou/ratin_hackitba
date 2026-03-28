@@ -238,7 +238,7 @@ function SignUpContent() {
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ background: "rgba(247,250,245,0.1)", backdropFilter: "blur(12px)", padding: "1.5rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.1)" }}>
               <p style={{ fontStyle: "italic", color: "rgba(255,255,255,0.8)", marginBottom: "1rem", lineHeight: 1.6, fontSize: "0.9rem" }}>
-                {`"The precision of CampoIA's soil stratigraphy metrics completely changed our planting strategy this season."`}
+                {`"The precision of SoyGuardian's soil stratigraphy metrics completely changed our planting strategy this season."`}
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{ width: "2.5rem", height: "2.5rem", borderRadius: "50%", background: "var(--c-secondary-container)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
