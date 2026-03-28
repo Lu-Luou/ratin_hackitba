@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FieldCard } from "@/components/dashboard/FieldCard";
 import { AddFieldDialog } from "@/components/dashboard/AddFieldDialog";
 import { FieldDetail } from "@/components/field/FieldDetail";
@@ -6,10 +6,58 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFields } from "@/context/FieldsContext";
 import { Search, ShieldCheck } from "lucide-react";
+import type { AlertsApiResponse, WeatherAlertItem } from "@/types/alert";
+import { computeFieldAlertRiskAdjustment } from "@/lib/alerts/risk-impact";
 
 export default function DashboardView({ filter }: { filter?: string }) {
   const { fields, isLoading, error, refreshFields, selectedField, setSelectedField } = useFields();
   const [search, setSearch] = useState("");
+  const [activeAlerts, setActiveAlerts] = useState<WeatherAlertItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchAlerts() {
+      try {
+        const response = await fetch("/api/alerts", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as Partial<AlertsApiResponse> & { error?: string };
+
+        if (!response.ok || cancelled) {
+          return;
+        }
+
+        setActiveAlerts(Array.isArray(payload.data) ? payload.data : []);
+      } catch {
+        if (!cancelled) {
+          setActiveAlerts([]);
+        }
+      }
+    }
+
+    void fetchAlerts();
+
+    const intervalId = window.setInterval(() => {
+      void fetchAlerts();
+    }, 90_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const alertCountByFieldId = useMemo(() => {
+    const entries = fields.map((field) => {
+      const adjustment = computeFieldAlertRiskAdjustment(field, activeAlerts);
+      return [field.id, adjustment.matchedAlertsCount] as const;
+    });
+
+    return Object.fromEntries(entries);
+  }, [fields, activeAlerts]);
 
   const filtered = useMemo(() => {
     let result = fields;
@@ -82,7 +130,12 @@ export default function DashboardView({ filter }: { filter?: string }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((field) => (
-          <FieldCard key={field.id} field={field} onClick={() => setSelectedField(field)} />
+          <FieldCard
+            key={field.id}
+            field={field}
+            activeAlertCount={alertCountByFieldId[field.id] ?? 0}
+            onClick={() => setSelectedField(field)}
+          />
         ))}
         {showAddFieldDialog ? <AddFieldDialog /> : null}
       </div>

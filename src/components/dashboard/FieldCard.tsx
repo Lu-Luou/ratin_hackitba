@@ -1,6 +1,6 @@
 import type { FieldProfile } from "@/types/field";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFieldWeather } from "@/hooks/use-field-weather";
 import { WeatherIndicator } from "@/components/field/WeatherIndicator";
@@ -17,7 +17,15 @@ function scoreBg(score: number) {
   return "bg-destructive/10";
 }
 
-export function FieldCard({ field, onClick }: { field: FieldProfile; onClick: () => void }) {
+export function FieldCard({
+  field,
+  onClick,
+  activeAlertCount = 0,
+}: {
+  field: FieldProfile;
+  onClick: () => void;
+  activeAlertCount?: number;
+}) {
   const positive = field.monthlyRevenueChange >= 0;
   const { data: weather, loading: weatherLoading, error: weatherError } = useFieldWeather(field.id);
 
@@ -32,8 +40,16 @@ export function FieldCard({ field, onClick }: { field: FieldProfile; onClick: ()
             <h3 className="font-display font-semibold text-foreground text-base">{field.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{field.hectares} ha · {field.zone}</p>
           </div>
-          <div className={cn("rounded-full px-3 py-1 text-sm font-bold", scoreBg(field.score), scoreColor(field.score))}>
-            {field.score}
+          <div className="flex flex-col items-end gap-1">
+            {activeAlertCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                <TriangleAlert className="h-3 w-3" />
+                {activeAlertCount} alerta(s)
+              </span>
+            ) : null}
+            <div className={cn("rounded-full px-3 py-1 text-sm font-bold", scoreBg(field.score), scoreColor(field.score))}>
+              {field.score}
+            </div>
           </div>
         </div>
 

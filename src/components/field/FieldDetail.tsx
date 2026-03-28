@@ -3,14 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFields } from "@/context/FieldsContext";
 import { FieldChatPanel } from "./FieldChatPanel";
 import { useFieldWeather } from "@/hooks/use-field-weather";
 import { CreditRiskPanel } from "./CreditRiskPanel";
+import type { AlertsApiResponse, WeatherAlertItem } from "@/types/alert";
+import { applyAlertRiskAdjustment, computeFieldAlertRiskAdjustment } from "@/lib/alerts/risk-impact";
 
 function riskBadgeVariant(level: string): "default" | "secondary" | "destructive" {
   if (level === "Bajo") return "secondary";
@@ -21,6 +23,7 @@ function riskBadgeVariant(level: string): "default" | "secondary" | "destructive
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
   const { updateField, deleteField, refreshFields } = useFields();
   const { data: weatherData } = useFieldWeather(field.id);
+  const [activeAlerts, setActiveAlerts] = useState<WeatherAlertItem[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -35,6 +38,82 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
     setPrediction(field.latestPrediction);
     setCostOverrideUsd(String(field.defaultCostPerHaUsd));
   }, [field.id, field.latestPrediction, field.defaultCostPerHaUsd]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchAlerts() {
+      try {
+        const response = await fetch("/api/alerts", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as Partial<AlertsApiResponse> & { error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "No se pudieron cargar las alertas activas.");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setActiveAlerts(Array.isArray(payload.data) ? payload.data : []);
+      } catch {
+        if (!cancelled) {
+          setActiveAlerts([]);
+        }
+      }
+    }
+
+    void fetchAlerts();
+
+    const intervalId = window.setInterval(() => {
+      void fetchAlerts();
+    }, 90_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [field.id]);
+
+  const riskAdjustment = useMemo(() => computeFieldAlertRiskAdjustment(field, activeAlerts), [field, activeAlerts]);
+  const adjustedRisk = useMemo(() => applyAlertRiskAdjustment(field.risk, riskAdjustment), [field.risk, riskAdjustment]);
+  const effectiveField = useMemo(
+    () => ({
+      ...field,
+      risk: adjustedRisk,
+    }),
+    [field, adjustedRisk],
+  );
+  const adjustmentSummary = useMemo(() => {
+    const chunks: string[] = [];
+
+    if (riskAdjustment.deductions.climate > 0) {
+      chunks.push(`Climatico -${riskAdjustment.deductions.climate.toFixed(1)}`);
+    }
+
+    if (riskAdjustment.deductions.market > 0) {
+      chunks.push(`Mercado -${riskAdjustment.deductions.market.toFixed(1)}`);
+    }
+
+    if (riskAdjustment.deductions.logistics > 0) {
+      chunks.push(`Logistica -${riskAdjustment.deductions.logistics.toFixed(1)}`);
+    }
+
+    return chunks.join(" | ");
+  }, [riskAdjustment]);
+  const matchedAlerts = useMemo(
+    () => activeAlerts.filter((alert) => riskAdjustment.matchedAlertIds.includes(alert.id)),
+    [activeAlerts, riskAdjustment.matchedAlertIds],
+  );
+  const matchedAlertsOrdered = useMemo(
+    () => [...matchedAlerts].sort((a, b) => b.priorityScore - a.priorityScore),
+    [matchedAlerts],
+  );
+  const topPhenomenon = matchedAlertsOrdered[0]?.description ?? null;
 
   function formatUsd(value: number) {
     return new Intl.NumberFormat("en-US", {
@@ -389,13 +468,21 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
           {/* Risk */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Evaluación de Riesgo</CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Evaluación de Riesgo</CardTitle>
+                {riskAdjustment.matchedAlertsCount > 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                    <TriangleAlert className="h-3 w-3" />
+                    {riskAdjustment.matchedAlertsCount} alerta(s)
+                  </span>
+                ) : null}
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "Climático", level: field.risk.climate, score: field.risk.climateScore },
-                { label: "Mercado", level: field.risk.market, score: field.risk.marketScore },
-                { label: "Logística", level: field.risk.logistics, score: field.risk.logisticsScore },
+                { label: "Climático", level: effectiveField.risk.climate, score: effectiveField.risk.climateScore },
+                { label: "Mercado", level: effectiveField.risk.market, score: effectiveField.risk.marketScore },
+                { label: "Logística", level: effectiveField.risk.logistics, score: effectiveField.risk.logisticsScore },
               ].map((r) => (
                 <div key={r.label} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
@@ -405,11 +492,23 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
                   <Progress value={r.score} className="h-1.5" />
                 </div>
               ))}
+
+              {riskAdjustment.matchedAlertsCount > 0 ? (
+                <div className="rounded-md border border-orange-200 bg-orange-50/70 px-2 py-1.5 text-xs text-orange-900">
+                  <p className="font-medium">Ajuste por alertas: {adjustmentSummary}</p>
+                  {topPhenomenon ? <p className="mt-0.5 text-orange-800">Fenomeno principal: {topPhenomenon}</p> : null}
+                  {matchedAlertsOrdered.length > 0 ? (
+                    <p className="mt-0.5 text-orange-800">
+                      Alertas vinculadas: {matchedAlertsOrdered.map((alert) => `P${alert.priorityScore}`).join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
 
-        <CreditRiskPanel field={field} weatherRiskScore={weatherData?.metrics.riskScore ?? null} />
+        <CreditRiskPanel field={effectiveField} weatherRiskScore={weatherData?.metrics.riskScore ?? null} />
 
         {/* Chart */}
         <Card>
