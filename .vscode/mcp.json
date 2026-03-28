@@ -11,18 +11,8 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://USER:PASSWORD@localhost:5432/DB_NAME"
+        "postgresql://postgres:8bn9oWyhS2p25q79@db.kquvlcoxndatkhtmzofr.supabase.co:5432/postgres"
       ]
-    },
-    "supabase": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@supabase/mcp-server-supabase"
-      ],
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": "TU_SUPABASE_TOKEN"
-      }
     },
     "testing": {
       "command": "node",
