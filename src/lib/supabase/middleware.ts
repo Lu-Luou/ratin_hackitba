@@ -6,7 +6,7 @@ import type { Database } from "@/types/database";
 const PUBLIC_API_PATHS = new Set(["/api/auth/register", "/api/auth/login"]);
 
 function isPublicPage(pathname: string) {
-  return pathname === "/" || pathname.startsWith("/auth") || pathname.startsWith("/login");
+  return pathname === "/" || pathname.startsWith("/auth") || pathname.startsWith("/login") || pathname.startsWith("/signup");
 }
 
 function isApiPath(pathname: string) {
@@ -41,6 +41,11 @@ export async function updateSession(request: NextRequest) {
   const { supabaseUrl, supabaseKey } = getSupabaseServerEnv();
 
   const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();

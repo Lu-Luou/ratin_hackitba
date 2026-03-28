@@ -20,6 +20,16 @@ function readCredentials(formData: FormData) {
   return { email, password };
 }
 
+function readOptionalProfile(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const farmName = String(formData.get("farmName") ?? "").trim();
+
+  return {
+    name: name || undefined,
+    farmName: farmName || undefined,
+  };
+}
+
 export async function signIn(formData: FormData) {
   const { email, password } = readCredentials(formData);
   try {
@@ -37,8 +47,9 @@ export async function signIn(formData: FormData) {
 
 export async function signUp(formData: FormData) {
   const { email, password } = readCredentials(formData);
+  const profile = readOptionalProfile(formData);
   try {
-    await registerWithEmailPassword(email, password);
+    await registerWithEmailPassword(email, password, profile);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
