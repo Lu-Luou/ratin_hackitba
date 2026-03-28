@@ -79,6 +79,14 @@ export async function POST(request: Request) {
         repayment: stats.repayment as Prisma.InputJsonValue,
         risk: stats.risk as Prisma.InputJsonValue,
       },
+      include: {
+        predictionSnapshots: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
     });
 
     return NextResponse.json(
