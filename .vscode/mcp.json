@@ -1,0 +1,37 @@
+{
+  "servers": {
+    "memory": {
+      "command": "node",
+      "args": [
+        "./mcp/memory-server.mjs"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://USER:PASSWORD@localhost:5432/DB_NAME"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "TU_SUPABASE_TOKEN"
+      }
+    },
+    "testing": {
+      "command": "node",
+      "args": [
+        "./mcp/testing-server.mjs"
+      ],
+      "env": {
+        "TEST_COMMAND": "npm test --if-present"
+      }
+    }
+  }
+}

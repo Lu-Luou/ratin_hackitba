@@ -1,4 +1,4 @@
-# Ratin Hackitba
+# CampoAI Hackitba
 
 Base inicial con:
 
@@ -152,3 +152,46 @@ Ademas, en Supabase agrega el dominio de Vercel en Authentication > URL Configur
 - `src/app/auth/actions.ts`: server actions para sign in/up/out.
 - `src/app/auth/callback/route.ts`: confirmacion de email y exchange de sesion.
 - `src/types/database.ts`: tipos base de la DB (editable segun tu esquema).
+
+## MCP en VS Code
+
+Se agrego configuracion en `.vscode/mcp.json` con estos servers:
+
+- `memory`: server local en `mcp/memory-server.mjs` (persistencia en `mcp/memory.json`).
+- `postgres`: `@modelcontextprotocol/server-postgres` via `npx`.
+- `supabase`: `@supabase/mcp-server-supabase` via `npx`.
+- `testing`: server local en `mcp/testing-server.mjs`.
+
+### 1) Configurar credenciales
+
+Edita `.vscode/mcp.json` y reemplaza:
+
+- `postgresql://USER:PASSWORD@localhost:5432/DB_NAME`
+- `TU_SUPABASE_TOKEN`
+
+Opcional para testing:
+
+- `TEST_COMMAND` (por defecto: `npm test --if-present`)
+
+### 2) Verificar prerequisitos
+
+- Node.js disponible en PATH.
+- Para `postgres` y `supabase` no hace falta instalacion global si usas `npx`.
+
+Si prefieres instalar global:
+
+```bash
+npm install -g @modelcontextprotocol/server-postgres @supabase/mcp-server-supabase
+```
+
+### 3) Iniciar los MCP
+
+1. Abre `/.vscode/mcp.json`.
+1. En Copilot Chat, usa **Start MCP Servers**.
+
+### 4) Ejemplos de uso
+
+- "use postgres MCP to list tables"
+- "use supabase MCP to get users"
+- "use memory MCP to store decision: usamos supabase auth"
+- "use testing MCP to run tests"
