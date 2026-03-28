@@ -1,4 +1,5 @@
 # CampoAI Hackitba
+
 Hola
 Base inicial con:
 
@@ -27,11 +28,9 @@ cp .env.example .env.local
 Variables:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-# opcional para tareas admin en server only
 SUPABASE_SERVICE_ROLE_KEY=...
+DATABASE_URL=postgresql://postgres:password@db.your-project-ref.supabase.co:5432/postgres
 ```
 
 Configura en Supabase (Authentication > URL Configuration):
@@ -96,10 +95,9 @@ npx supabase status
 Con esos datos, usa en `.env.local` algo como:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=... # from supabase status
-SUPABASE_SERVICE_ROLE_KEY=... # from supabase status
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=... # from supabase status
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 ```
 
 Para apagarlo:
@@ -129,10 +127,9 @@ Flujo auth:
 1. En Project Settings > Environment Variables agrega:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_SITE_URL=https://tu-app.vercel.app
 SUPABASE_SERVICE_ROLE_KEY=... # solo si lo necesitas en server
+DATABASE_URL=postgresql://postgres:password@db.your-project-ref.supabase.co:5432/postgres
 ```
 
 1. Deploy.

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseEnv } from "@/lib/supabase/config";
+import { getSupabaseServerEnv, hasSupabaseServerEnv } from "@/lib/supabase/config";
 import type { Database } from "@/types/database";
 
 export async function updateSession(request: NextRequest) {
@@ -8,18 +8,13 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const hasSupabaseEnv = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
-
-  if (!hasSupabaseEnv) {
+  if (!hasSupabaseServerEnv()) {
     return response;
   }
 
-  const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
+  const { supabaseUrl, supabaseKey } = getSupabaseServerEnv();
 
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

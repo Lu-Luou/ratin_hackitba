@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasSupabaseServerEnv } from "@/lib/supabase/config";
 import type { Database } from "@/types/database";
 
 type Todo = Database["public"]["Tables"]["todos"]["Row"];
@@ -8,10 +9,7 @@ type Todo = Database["public"]["Tables"]["todos"]["Row"];
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const hasSupabaseEnv = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  const hasSupabaseEnv = hasSupabaseServerEnv();
 
   if (!hasSupabaseEnv) {
     return (
@@ -27,8 +25,9 @@ export default async function Home() {
             Crea el archivo <code className="rounded bg-zinc-800 px-1.5 py-0.5">.env.local</code> usando <code className="rounded bg-zinc-800 px-1.5 py-0.5">.env.example</code> y vuelve a correr el proyecto.
           </p>
           <div className="mt-6 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-300">
-            NEXT_PUBLIC_SUPABASE_URL=...<br />
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+            NEXT_PUBLIC_SITE_URL=http://localhost:3000<br />
+            SUPABASE_SERVICE_ROLE_KEY=...<br />
+            DATABASE_URL=postgresql://...
           </div>
         </div>
       </main>
@@ -84,7 +83,7 @@ export default async function Home() {
           <div className="rounded-xl border border-zinc-800 bg-black/30 p-4">
             <h2 className="text-sm font-medium text-zinc-200">Variables requeridas</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY
+              NEXT_PUBLIC_SITE_URL, SUPABASE_SERVICE_ROLE_KEY y DATABASE_URL
             </p>
           </div>
           <div className="rounded-xl border border-zinc-800 bg-black/30 p-4 sm:col-span-2">
