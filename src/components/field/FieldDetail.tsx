@@ -9,6 +9,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useEffect, useState } from "react";
 import { useFields } from "@/context/FieldsContext";
 import { FieldChatPanel } from "./FieldChatPanel";
+import { useFieldWeather } from "@/hooks/use-field-weather";
+import { CreditRiskPanel } from "./CreditRiskPanel";
 
 function riskBadgeVariant(level: string): "default" | "secondary" | "destructive" {
   if (level === "Bajo") return "secondary";
@@ -18,6 +20,7 @@ function riskBadgeVariant(level: string): "default" | "secondary" | "destructive
 
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
   const { updateField, deleteField, refreshFields } = useFields();
+  const { data: weatherData } = useFieldWeather(field.id);
   const [chatOpen, setChatOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -405,6 +408,8 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
             </CardContent>
           </Card>
         </div>
+
+        <CreditRiskPanel field={field} weatherRiskScore={weatherData?.metrics.riskScore ?? null} />
 
         {/* Chart */}
         <Card>
