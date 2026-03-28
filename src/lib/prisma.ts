@@ -34,7 +34,6 @@ setDefaultResultOrder("ipv4first");
 
 const pool = new Pool({
   connectionString: databaseUrl,
-  family: 4,
 });
 
 const adapter = new PrismaPg(pool, {
