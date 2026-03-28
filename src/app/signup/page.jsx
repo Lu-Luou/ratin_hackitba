@@ -81,7 +81,7 @@ export default function CampoIASignUp() {
         throw new Error(payload?.error ?? "No se pudo crear la cuenta.");
       }
 
-      router.push("/auth?message=Cuenta%20creada%20y%20sesion%20iniciada.");
+      router.push("/dashboard");
       router.refresh();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo crear la cuenta.");

@@ -50,7 +50,7 @@ export default function CampoIALogin() {
         throw new Error(payload?.error ?? "No se pudo iniciar sesion.");
       }
 
-      router.push("/auth?message=Sesion%20iniciada%20correctamente.");
+      router.push("/dashboard");
       router.refresh();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo iniciar sesion.");

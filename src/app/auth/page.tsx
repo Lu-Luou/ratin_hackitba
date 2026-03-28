@@ -38,10 +38,10 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
             <p className="mt-1 text-sm font-medium text-zinc-100">{user.email}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
-                href="/"
+                href="/dashboard"
                 className="rounded-full border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm text-zinc-100 transition hover:bg-zinc-700"
               >
-                Ir al inicio
+                Ir al dashboard
               </Link>
               <form action={signOut}>
                 <button
