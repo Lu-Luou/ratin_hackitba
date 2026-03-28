@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { signUp } from "@/app/auth/actions";
 
 const Icon = ({ name, fill = 0, size = 24, style = {}, className = "" }) => (
   <span
@@ -22,72 +23,43 @@ const Field = ({ label, children }) => (
 );
 
 export default function CampoIASignUp() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     name: "", email: "", farm: "", password: "", confirm: "", terms: false,
   });
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(searchParams.get("message") ?? "");
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = (e) => {
     if (!form.name.trim() || !form.email.trim() || !form.farm.trim() || !form.password.trim()) {
+      e.preventDefault();
       setError("Completa todos los campos obligatorios.");
       return;
     }
 
     if (form.password.length < 6) {
+      e.preventDefault();
       setError("El password debe tener al menos 6 caracteres.");
       return;
     }
 
     if (form.password !== form.confirm) {
+      e.preventDefault();
       setError("La confirmacion de password no coincide.");
       return;
     }
 
     if (!form.terms) {
+      e.preventDefault();
       setError("Debes aceptar terminos y privacidad para continuar.");
       return;
     }
 
     setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          farmName: form.farm.trim(),
-          email: form.email.trim(),
-          password: form.password,
-        }),
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "No se pudo crear la cuenta.");
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No se pudo crear la cuenta.");
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
@@ -311,25 +283,27 @@ export default function CampoIASignUp() {
             </header>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <form action={signUp} onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              <input type="hidden" name="successRedirectTo" value="/dashboard" />
+              <input type="hidden" name="errorRedirectTo" value="/signup" />
               <Field label="Full Name">
                 <div style={{ position: "relative" }}>
                   <Icon name="person" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="text" placeholder="John Doe" required disabled={isSubmitting} value={form.name} onChange={set("name")} />
+                  <input className="tray-input tray-input-icon" name="name" type="text" placeholder="John Doe" required value={form.name} onChange={set("name")} />
                 </div>
               </Field>
 
               <Field label="Email Address">
                 <div style={{ position: "relative" }}>
                   <Icon name="mail" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="email" placeholder="john@farm.com" required disabled={isSubmitting} value={form.email} onChange={set("email")} />
+                  <input className="tray-input tray-input-icon" name="email" type="email" placeholder="john@farm.com" required value={form.email} onChange={set("email")} />
                 </div>
               </Field>
 
               <Field label="Farm / Company Name">
                 <div style={{ position: "relative" }}>
                   <Icon name="domain" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="text" placeholder="Green Valley Estates" required disabled={isSubmitting} value={form.farm} onChange={set("farm")} />
+                  <input className="tray-input tray-input-icon" name="farmName" type="text" placeholder="Green Valley Estates" required value={form.farm} onChange={set("farm")} />
                 </div>
               </Field>
 
@@ -339,16 +313,16 @@ export default function CampoIASignUp() {
                     <Icon name="lock" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
                     <input
                       className="tray-input tray-input-icon"
+                      name="password"
                       style={{ paddingRight: "2.5rem" }}
                       type={showPass ? "text" : "password"}
                       placeholder="••••••••"
                       required
                       minLength={6}
-                      disabled={isSubmitting}
                       value={form.password}
                       onChange={set("password")}
                     />
-                    <button type="button" disabled={isSubmitting} onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
+                    <button type="button" onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
                       <Icon name={showPass ? "visibility_off" : "visibility"} size={20} style={{ fontSize: "1.1rem" }} />
                     </button>
                   </div>
@@ -359,16 +333,16 @@ export default function CampoIASignUp() {
                     <Icon name="lock_reset" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
                     <input
                       className="tray-input tray-input-icon"
+                      name="confirmPassword"
                       style={{ paddingRight: "2.5rem" }}
                       type={showConfirm ? "text" : "password"}
                       placeholder="••••••••"
                       required
                       minLength={6}
-                      disabled={isSubmitting}
                       value={form.confirm}
                       onChange={set("confirm")}
                     />
-                    <button type="button" disabled={isSubmitting} onClick={() => setShowConfirm(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
+                    <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
                       <Icon name={showConfirm ? "visibility_off" : "visibility"} size={20} style={{ fontSize: "1.1rem" }} />
                     </button>
                   </div>
@@ -380,8 +354,8 @@ export default function CampoIASignUp() {
                 <input
                   id="terms"
                   type="checkbox"
+                  name="terms"
                   checked={form.terms}
-                  disabled={isSubmitting}
                   onChange={set("terms")}
                   required
                   style={{ width: "1.1rem", height: "1.1rem", marginTop: "0.15rem", accentColor: "var(--c-primary)", cursor: "pointer", flexShrink: 0 }}
@@ -394,8 +368,8 @@ export default function CampoIASignUp() {
                 </label>
               </div>
 
-              <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                {isSubmitting ? "Creating account..." : "Create Account"}
+              <button type="submit" className="btn-primary">
+                Create Account
               </button>
             </form>
 

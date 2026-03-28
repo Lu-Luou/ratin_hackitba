@@ -14,6 +14,11 @@ const createFieldSchema = z.object({
   zone: z.string().trim().min(2).max(120).optional(),
   latitude: z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
+  bboxMinLon: z.number().min(-180).max(180).nullable().optional(),
+  bboxMinLat: z.number().min(-90).max(90).nullable().optional(),
+  bboxMaxLon: z.number().min(-180).max(180).nullable().optional(),
+  bboxMaxLat: z.number().min(-90).max(90).nullable().optional(),
+  defaultCostPerHaUsd: z.number().min(0).max(1_000_000).optional(),
 });
 
 export async function GET() {
@@ -23,6 +28,14 @@ export async function GET() {
     const fields = await prisma.field.findMany({
       where: {
         userId: appUser.id,
+      },
+      include: {
+        predictionSnapshots: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -52,7 +65,12 @@ export async function POST(request: Request) {
         location: body.location ?? "Sin definir",
         latitude: body.latitude ?? null,
         longitude: body.longitude ?? null,
+        bboxMinLon: body.bboxMinLon ?? null,
+        bboxMinLat: body.bboxMinLat ?? null,
+        bboxMaxLon: body.bboxMaxLon ?? null,
+        bboxMaxLat: body.bboxMaxLat ?? null,
         zone: body.zone ?? "Sin definir",
+        defaultCostPerHaUsd: body.defaultCostPerHaUsd ?? 0,
         score: stats.score,
         scoreTrend: stats.scoreTrend,
         monthlyRevenueChange: stats.monthlyRevenueChange,

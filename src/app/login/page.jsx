@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { signIn } from "@/app/auth/actions";
 
 const Icon = ({ name, fill = 0, size = 24, style = {} }) => (
   <span
@@ -14,50 +15,9 @@ const Icon = ({ name, fill = 0, size = 24, style = {} }) => (
 );
 
 export default function CampoIALogin() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", remember: false });
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!form.email.trim() || !form.password.trim()) {
-      setError("Completa email y password.");
-      return;
-    }
-
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email.trim(),
-          password: form.password,
-        }),
-      });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "No se pudo iniciar sesion.");
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No se pudo iniciar sesion.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const message = searchParams.get("message") ?? "";
 
   return (
     <>
@@ -286,7 +246,7 @@ export default function CampoIALogin() {
             <header>
               <h2 className="font-headline" style={{ fontSize: "2.25rem", fontWeight: 800, color: "var(--c-primary)", letterSpacing: "-0.03em", marginBottom: "0.5rem" }}>Welcome back</h2>
               <p style={{ color: "var(--c-on-surface-variant)", fontSize: "1.05rem" }}>Access your digital twin dashboard</p>
-              {error ? (
+              {message ? (
                 <p
                   style={{
                     marginTop: "0.9rem",
@@ -299,13 +259,15 @@ export default function CampoIALogin() {
                     fontWeight: 600,
                   }}
                 >
-                  {error}
+                  {message}
                 </p>
               ) : null}
             </header>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <form action={signIn} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <input type="hidden" name="successRedirectTo" value="/dashboard" />
+              <input type="hidden" name="errorRedirectTo" value="/login" />
               {/* Email */}
               <div>
                 <label htmlFor="email" style={{ display: "block", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--c-on-surface-variant)", marginBottom: "0.5rem", marginLeft: "0.25rem" }}>
@@ -315,13 +277,11 @@ export default function CampoIALogin() {
                   <Icon name="mail" size={20} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.2rem", pointerEvents: "none" }} />
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     className="field-input"
                     placeholder="agronomist@farm.com"
                     required
-                    disabled={isSubmitting}
-                    value={form.email}
-                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                   />
                 </div>
               </div>
@@ -338,19 +298,16 @@ export default function CampoIALogin() {
                   <Icon name="lock" size={20} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.2rem", pointerEvents: "none" }} />
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     className="field-input"
                     style={{ paddingRight: "3rem" }}
                     placeholder="••••••••"
                     required
                     minLength={6}
-                    disabled={isSubmitting}
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   />
                   <button
                     type="button"
-                    disabled={isSubmitting}
                     onClick={() => setShowPassword(v => !v)}
                     style={{ position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}
                   >
@@ -363,10 +320,8 @@ export default function CampoIALogin() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <input
                   id="remember"
+                  name="remember"
                   type="checkbox"
-                  checked={form.remember}
-                  disabled={isSubmitting}
-                  onChange={e => setForm(f => ({ ...f, remember: e.target.checked }))}
                   style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--c-primary)", cursor: "pointer" }}
                 />
                 <label htmlFor="remember" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--c-on-surface-variant)", cursor: "pointer" }}>
@@ -374,8 +329,8 @@ export default function CampoIALogin() {
                 </label>
               </div>
 
-              <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign In to Dashboard"}
+              <button type="submit" className="btn-primary">
+                Sign In to Dashboard
                 <Icon name="arrow_forward" className="arrow-icon" />
               </button>
             </form>

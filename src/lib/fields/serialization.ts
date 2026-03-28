@@ -1,5 +1,14 @@
 import { z } from "zod";
-import type { FieldProfile, FieldRepayment, FieldRisk, LiquidityLevel, RiskLevel } from "@/types/field";
+import type {
+  FieldPredictionSummary,
+  FieldProfile,
+  FieldRepayment,
+  FieldRisk,
+  FuturesValuationPoint,
+  LiquidityLevel,
+  RiskLevel,
+  SoyFuturesContract,
+} from "@/types/field";
 
 const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"] as const;
 
@@ -33,13 +42,49 @@ const riskSchema = z.object({
   logisticsScore: z.number(),
 });
 
+const futuresContractSchema = z.object({
+  symbol: z.string(),
+  label: z.string(),
+  expiration: z.string(),
+  priceUsdPerTon: z.number(),
+});
+
+const futuresValuationSchema = z.object({
+  symbol: z.string(),
+  label: z.string(),
+  expiration: z.string(),
+  priceUsdPerTon: z.number(),
+  grossUsd: z.number(),
+  netUsd: z.number(),
+});
+
+const predictionSnapshotSchema = z.object({
+  id: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  predictedYieldTonHa: z.number(),
+  warning: z.string().nullable().optional(),
+  spotPriceUsdPerTon: z.number(),
+  costPerHaUsd: z.number(),
+  grossSpotUsd: z.number(),
+  netSpotUsd: z.number(),
+  futuresContracts: z.array(futuresContractSchema),
+  futuresValuations: z.array(futuresValuationSchema),
+  createdAt: z.date(),
+});
+
 export type FieldRecord = {
   id: string;
   name: string;
   location: string;
   latitude: number | null;
   longitude: number | null;
+  bboxMinLon: number | null;
+  bboxMinLat: number | null;
+  bboxMaxLon: number | null;
+  bboxMaxLat: number | null;
   hectares: number;
+  defaultCostPerHaUsd: number;
   score: number;
   scoreTrend: number;
   monthlyRevenueChange: number;
@@ -49,6 +94,21 @@ export type FieldRecord = {
   risk: unknown;
   zone: string;
   createdAt: Date;
+  predictionSnapshots?: Array<{
+    id: string;
+    startDate: string;
+    endDate: string;
+    predictedYieldTonHa: number;
+    warning: string | null;
+    spotPriceUsdPerTon: number;
+    costPerHaUsd: number;
+    grossSpotUsd: number;
+    netSpotUsd: number;
+    futuresContracts: unknown;
+    grossFuturesUsd: unknown;
+    netFuturesUsd: unknown;
+    createdAt: Date;
+  }>;
 };
 
 function hashString(input: string) {
@@ -161,6 +221,80 @@ function parseWithFallback<T>(schema: z.ZodType<T>, value: unknown, fallback: T)
   return parsed.success ? parsed.data : fallback;
 }
 
+function buildLatestPredictionSummary(record: FieldRecord): FieldPredictionSummary | null {
+  const latestSnapshot = record.predictionSnapshots?.[0];
+
+  if (!latestSnapshot) {
+    return null;
+  }
+
+  const futuresContracts = parseWithFallback<SoyFuturesContract[]>(
+    z.array(futuresContractSchema),
+    latestSnapshot.futuresContracts,
+    [],
+  );
+  const grossFuturesBySymbol = parseWithFallback<Record<string, number>>(
+    z.record(z.string(), z.number()),
+    latestSnapshot.grossFuturesUsd,
+    {},
+  );
+  const netFuturesBySymbol = parseWithFallback<Record<string, number>>(
+    z.record(z.string(), z.number()),
+    latestSnapshot.netFuturesUsd,
+    {},
+  );
+
+  const futuresValuations: FuturesValuationPoint[] = futuresContracts.map((contract) => {
+    const fallbackGross = Number((latestSnapshot.predictedYieldTonHa * contract.priceUsdPerTon).toFixed(2));
+    const grossUsd = Number((grossFuturesBySymbol[contract.symbol] ?? fallbackGross).toFixed(2));
+    const netUsd = Number(
+      (
+        netFuturesBySymbol[contract.symbol] ??
+        grossUsd - latestSnapshot.costPerHaUsd * record.hectares
+      ).toFixed(2),
+    );
+
+    return {
+      symbol: contract.symbol,
+      label: contract.label,
+      expiration: contract.expiration,
+      priceUsdPerTon: contract.priceUsdPerTon,
+      grossUsd,
+      netUsd,
+    };
+  });
+
+  const parsedSnapshot = predictionSnapshotSchema.parse({
+    id: latestSnapshot.id,
+    startDate: latestSnapshot.startDate,
+    endDate: latestSnapshot.endDate,
+    predictedYieldTonHa: latestSnapshot.predictedYieldTonHa,
+    warning: latestSnapshot.warning,
+    spotPriceUsdPerTon: latestSnapshot.spotPriceUsdPerTon,
+    costPerHaUsd: latestSnapshot.costPerHaUsd,
+    grossSpotUsd: latestSnapshot.grossSpotUsd,
+    netSpotUsd: latestSnapshot.netSpotUsd,
+    futuresContracts,
+    futuresValuations,
+    createdAt: latestSnapshot.createdAt,
+  });
+
+  return {
+    snapshotId: parsedSnapshot.id,
+    startDate: parsedSnapshot.startDate,
+    endDate: parsedSnapshot.endDate,
+    predictedYieldTonHa: Number(parsedSnapshot.predictedYieldTonHa.toFixed(3)),
+    warning: parsedSnapshot.warning ?? undefined,
+    spotPriceUsdPerTon: Number(parsedSnapshot.spotPriceUsdPerTon.toFixed(2)),
+    costPerHaUsd: Number(parsedSnapshot.costPerHaUsd.toFixed(2)),
+    grossSpotUsd: Number(parsedSnapshot.grossSpotUsd.toFixed(2)),
+    netSpotUsd: Number(parsedSnapshot.netSpotUsd.toFixed(2)),
+    futuresContracts: parsedSnapshot.futuresContracts,
+    futuresValuations: parsedSnapshot.futuresValuations,
+    createdAt: parsedSnapshot.createdAt.toISOString(),
+  };
+}
+
 export function serializeField(field: FieldRecord): FieldProfile {
   const defaults = buildFieldStats(field.name, field.hectares);
 
@@ -170,7 +304,12 @@ export function serializeField(field: FieldRecord): FieldProfile {
     location: field.location,
     latitude: field.latitude,
     longitude: field.longitude,
+    bboxMinLon: field.bboxMinLon,
+    bboxMinLat: field.bboxMinLat,
+    bboxMaxLon: field.bboxMaxLon,
+    bboxMaxLat: field.bboxMaxLat,
     hectares: field.hectares,
+    defaultCostPerHaUsd: Number(field.defaultCostPerHaUsd.toFixed(2)),
     score: field.score,
     scoreTrend: field.scoreTrend,
     monthlyRevenueChange: field.monthlyRevenueChange,
@@ -180,5 +319,6 @@ export function serializeField(field: FieldRecord): FieldProfile {
     risk: parseWithFallback(riskSchema, field.risk, defaults.risk),
     zone: field.zone,
     createdAt: field.createdAt.toISOString().slice(0, 10),
+    latestPrediction: buildLatestPredictionSummary(field),
   };
 }

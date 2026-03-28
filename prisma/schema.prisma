@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -12,21 +7,16 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model AppUser {
   id        String   @id @db.Uuid
   email     String   @unique
   role      Role     @default(USER)
-  name      String?  @db.Text
-  farmName  String?  @map("farm_name") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  todos     Todo[]
+  name      String?
+  farmName  String?  @map("farm_name")
   fields    Field[]
+  todos     Todo[]
 
   @@map("app_users")
 }
@@ -37,7 +27,12 @@ model Field {
   location             String   @default("Sin definir") @db.Text
   latitude             Float?   @db.DoublePrecision
   longitude            Float?   @db.DoublePrecision
+  bboxMinLon           Float?   @map("bbox_min_lon") @db.DoublePrecision
+  bboxMinLat           Float?   @map("bbox_min_lat") @db.DoublePrecision
+  bboxMaxLon           Float?   @map("bbox_max_lon") @db.DoublePrecision
+  bboxMaxLat           Float?   @map("bbox_max_lat") @db.DoublePrecision
   hectares             Int
+  defaultCostPerHaUsd  Float    @default(0) @map("default_cost_per_ha_usd") @db.DoublePrecision
   score                Int      @default(50)
   scoreTrend           Int      @default(0) @map("score_trend")
   monthlyRevenueChange Float    @default(0) @map("monthly_revenue_change")
@@ -45,10 +40,11 @@ model Field {
   yieldHistory         Json     @map("yield_history")
   repayment            Json
   risk                 Json
-  zone                 String   @default("Sin definir") @db.Text
+  zone                 String   @default("Sin definir")
   userId               String   @map("user_id") @db.Uuid
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  predictionSnapshots  PredictionSnapshot[]
   user                 AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -56,15 +52,43 @@ model Field {
   @@map("fields")
 }
 
+model PredictionSnapshot {
+  id                    String   @id @default(cuid())
+  fieldId               String   @map("field_id")
+  startDate             String   @map("start_date") @db.Text
+  endDate               String   @map("end_date") @db.Text
+  predictedYieldTonHa   Float    @map("predicted_yield_ton_ha") @db.DoublePrecision
+  spotPriceUsdPerTon    Float    @map("spot_price_usd_per_ton") @db.DoublePrecision
+  futuresContracts      Json     @map("futures_contracts")
+  costPerHaUsd          Float    @map("cost_per_ha_usd") @db.DoublePrecision
+  grossSpotUsd          Float    @map("gross_spot_usd") @db.DoublePrecision
+  netSpotUsd            Float    @map("net_spot_usd") @db.DoublePrecision
+  grossFuturesUsd       Json     @map("gross_futures_usd")
+  netFuturesUsd         Json     @map("net_futures_usd")
+  warning               String?  @db.Text
+  source                String   @default("yahoo") @db.Text
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([fieldId, createdAt])
+  @@map("prediction_snapshots")
+}
+
 model Todo {
   id        Int      @id @default(autoincrement())
-  title     String   @db.Text
+  title     String
   isDone    Boolean  @default(false) @map("is_done")
   userId    String?  @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user      AppUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      AppUser? @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("todos")
+}
+
+enum Role {
+  USER
+  ADMIN
 }

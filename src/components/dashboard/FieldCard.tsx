@@ -45,6 +45,16 @@ export function FieldCard({ field, onClick }: { field: FieldProfile; onClick: ()
           </span>
           <span className="text-xs text-muted-foreground">rev. mensual</span>
         </div>
+
+        {field.latestPrediction ? (
+          <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+            <p className="text-muted-foreground">Yield estimado</p>
+            <p className="font-semibold text-foreground">{field.latestPrediction.predictedYieldTonHa.toFixed(2)} ton/ha</p>
+            <p className={cn("font-semibold", field.latestPrediction.netSpotUsd >= 0 ? "text-success" : "text-destructive")}>
+              Neto spot: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(field.latestPrediction.netSpotUsd)}
+            </p>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

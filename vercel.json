@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron/nightly-predictions",
+      "schedule": "0 1 * * *"
+    }
+  ],
   "builds": [
     {
       "src": "api/predict.py",

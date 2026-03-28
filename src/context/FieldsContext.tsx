@@ -12,6 +12,11 @@ interface FieldsContextType {
     zone?: string;
     latitude?: number | null;
     longitude?: number | null;
+    bboxMinLon?: number | null;
+    bboxMinLat?: number | null;
+    bboxMaxLon?: number | null;
+    bboxMaxLat?: number | null;
+    defaultCostPerHaUsd?: number;
   }) => Promise<void>;
   updateField: (
     fieldId: string,
@@ -22,6 +27,11 @@ interface FieldsContextType {
       zone?: string;
       latitude?: number | null;
       longitude?: number | null;
+      bboxMinLon?: number | null;
+      bboxMinLat?: number | null;
+      bboxMaxLon?: number | null;
+      bboxMaxLat?: number | null;
+      defaultCostPerHaUsd?: number;
     },
   ) => Promise<void>;
   deleteField: (fieldId: string) => Promise<void>;
@@ -86,6 +96,11 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
     zone?: string;
     latitude?: number | null;
     longitude?: number | null;
+    bboxMinLon?: number | null;
+    bboxMinLat?: number | null;
+    bboxMaxLon?: number | null;
+    bboxMaxLat?: number | null;
+    defaultCostPerHaUsd?: number;
   }) => {
     try {
       const response = await fetch("/api/fields", {
@@ -97,13 +112,13 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(payload),
       });
 
-      const payload = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload?.error ?? "No se pudo crear el campo.");
+        throw new Error(data?.error ?? "No se pudo crear el campo.");
       }
 
-      const createdField = payload?.data as FieldProfile | undefined;
+      const createdField = data?.data as FieldProfile | undefined;
 
       if (!createdField) {
         throw new Error("No se recibio el nuevo campo desde el servidor.");
@@ -128,6 +143,11 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         zone?: string;
         latitude?: number | null;
         longitude?: number | null;
+        bboxMinLon?: number | null;
+        bboxMinLat?: number | null;
+        bboxMaxLon?: number | null;
+        bboxMaxLat?: number | null;
+        defaultCostPerHaUsd?: number;
       },
     ) => {
       try {

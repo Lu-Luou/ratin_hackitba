@@ -18,6 +18,11 @@ const updateFieldSchema = z
     zone: z.string().trim().min(2).max(120).optional(),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
+    bboxMinLon: z.number().min(-180).max(180).nullable().optional(),
+    bboxMinLat: z.number().min(-90).max(90).nullable().optional(),
+    bboxMaxLon: z.number().min(-180).max(180).nullable().optional(),
+    bboxMaxLat: z.number().min(-90).max(90).nullable().optional(),
+    defaultCostPerHaUsd: z.number().min(0).max(1_000_000).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Debes enviar al menos un campo para actualizar.",
@@ -42,6 +47,14 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const currentField = await prisma.field.findFirst({
       where: fieldOwnershipWhere(appUser.id, fieldId, appUser.role),
+      include: {
+        predictionSnapshots: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
     });
 
     if (!currentField) {
@@ -64,6 +77,11 @@ export async function PUT(request: Request, context: RouteContext) {
         zone: body.zone,
         latitude: body.latitude,
         longitude: body.longitude,
+        bboxMinLon: body.bboxMinLon,
+        bboxMinLat: body.bboxMinLat,
+        bboxMaxLon: body.bboxMaxLon,
+        bboxMaxLat: body.bboxMaxLat,
+        defaultCostPerHaUsd: body.defaultCostPerHaUsd,
         score: nextStats?.score,
         scoreTrend: nextStats?.scoreTrend,
         monthlyRevenueChange: nextStats?.monthlyRevenueChange,
@@ -71,6 +89,14 @@ export async function PUT(request: Request, context: RouteContext) {
         yieldHistory: nextStats ? (nextStats.yieldHistory as Prisma.InputJsonValue) : undefined,
         repayment: nextStats ? (nextStats.repayment as Prisma.InputJsonValue) : undefined,
         risk: nextStats ? (nextStats.risk as Prisma.InputJsonValue) : undefined,
+      },
+      include: {
+        predictionSnapshots: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
       },
     });
 

@@ -4,9 +4,19 @@ import { redirect } from "next/navigation";
 import { SessionError, registerWithEmailPassword, signInWithEmailPassword } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function redirectWithMessage(message: string) {
+function redirectWithMessage(message: string, targetPath = "/auth") {
   const query = new URLSearchParams({ message }).toString();
-  redirect(`/auth?${query}`);
+  redirect(`${targetPath}?${query}`);
+}
+
+function readRedirectTargets(formData: FormData) {
+  const successPath = String(formData.get("successRedirectTo") ?? "").trim() || "/dashboard";
+  const errorPath = String(formData.get("errorRedirectTo") ?? "").trim() || "/auth";
+
+  return {
+    successPath,
+    errorPath,
+  };
 }
 
 function readCredentials(formData: FormData) {
@@ -50,21 +60,23 @@ function readSignUpPayload(formData: FormData) {
 }
 
 export async function signIn(formData: FormData) {
+  const { successPath, errorPath } = readRedirectTargets(formData);
   const { email, password } = readCredentials(formData);
   try {
     await signInWithEmailPassword(email, password);
   } catch (error) {
     if (error instanceof SessionError) {
-      redirectWithMessage(error.message);
+      redirectWithMessage(error.message, errorPath);
     }
 
-    redirectWithMessage("No se pudo iniciar sesion.");
+    redirectWithMessage("No se pudo iniciar sesion.", errorPath);
   }
 
-  redirect("/dashboard");
+  redirect(successPath);
 }
 
 export async function signUp(formData: FormData) {
+  const { successPath, errorPath } = readRedirectTargets(formData);
   const { email, password, profile } = readSignUpPayload(formData);
   try {
     await registerWithEmailPassword(email, password, profile);
@@ -79,19 +91,20 @@ export async function signUp(formData: FormData) {
     });
 
     if (error instanceof SessionError) {
-      redirectWithMessage(error.message);
+      redirectWithMessage(error.message, errorPath);
     }
 
     if (message.includes("ENETUNREACH")) {
       redirectWithMessage(
         "No se pudo conectar a la base de datos. Configura DATABASE_URL_POOLER con la URL de Pooler de Supabase.",
+        errorPath,
       );
     }
 
-    redirectWithMessage("No se pudo crear la cuenta.");
+    redirectWithMessage("No se pudo crear la cuenta.", errorPath);
   }
 
-  redirect("/dashboard");
+  redirect(successPath);
 }
 
 export async function signOut() {

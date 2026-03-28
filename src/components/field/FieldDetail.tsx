@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFields } from "@/context/FieldsContext";
 import { FieldChatPanel } from "./FieldChatPanel";
 
@@ -17,11 +17,94 @@ function riskBadgeVariant(level: string): "default" | "secondary" | "destructive
 }
 
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
-  const { updateField, deleteField } = useFields();
+  const { updateField, deleteField, refreshFields } = useFields();
   const [chatOpen, setChatOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [prediction, setPrediction] = useState(field.latestPrediction);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [isSavingDefaultCost, setIsSavingDefaultCost] = useState(false);
+  const [costOverrideUsd, setCostOverrideUsd] = useState(String(field.defaultCostPerHaUsd));
+
+  useEffect(() => {
+    setPrediction(field.latestPrediction);
+    setCostOverrideUsd(String(field.defaultCostPerHaUsd));
+  }, [field.id, field.latestPrediction, field.defaultCostPerHaUsd]);
+
+  function formatUsd(value: number) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(value);
+  }
+
+  function parseCostOverride() {
+    const parsed = Number(costOverrideUsd);
+
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error("El costo por ha debe ser un numero mayor o igual a 0.");
+    }
+
+    return parsed;
+  }
+
+  async function runPrediction() {
+    if (isPredicting) {
+      return;
+    }
+
+    setPredictionError(null);
+    setIsPredicting(true);
+
+    try {
+      const parsedCost = parseCostOverride();
+      const response = await fetch(`/api/fields/${field.id}/prediction`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          costPerHaUsd: parsedCost,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No se pudo calcular la prediccion.");
+      }
+
+      setPrediction(payload?.data ?? null);
+      await refreshFields();
+    } catch (error) {
+      setPredictionError(error instanceof Error ? error.message : "No se pudo calcular la prediccion.");
+    } finally {
+      setIsPredicting(false);
+    }
+  }
+
+  async function saveDefaultCost() {
+    if (isSavingDefaultCost) {
+      return;
+    }
+
+    setPredictionError(null);
+    setIsSavingDefaultCost(true);
+
+    try {
+      const parsedCost = parseCostOverride();
+      await updateField(field.id, {
+        defaultCostPerHaUsd: parsedCost,
+      });
+    } catch (error) {
+      setPredictionError(error instanceof Error ? error.message : "No se pudo guardar el costo base.");
+    } finally {
+      setIsSavingDefaultCost(false);
+    }
+  }
 
   async function handleUpdate() {
     if (isUpdating || isDeleting) {
@@ -162,6 +245,95 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
         </div>
 
         {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
+
+        {/* Prediction & valuation */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Prediccion de Yield y Valor Soja (USD)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Costo temporal (USD/ha)</label>
+                <input
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={costOverrideUsd}
+                  onChange={(event) => setCostOverrideUsd(event.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="button" variant="outline" onClick={() => void saveDefaultCost()} disabled={isSavingDefaultCost || isPredicting}>
+                  {isSavingDefaultCost ? "Guardando costo..." : "Guardar como costo base"}
+                </Button>
+              </div>
+              <div className="flex items-end justify-start sm:justify-end">
+                <Button type="button" onClick={() => void runPrediction()} disabled={isPredicting}>
+                  {isPredicting ? "Calculando..." : "Recalcular ahora"}
+                </Button>
+              </div>
+            </div>
+
+            {!prediction ? (
+              <p className="text-sm text-muted-foreground">
+                Todavia no hay una prediccion guardada para este campo. Ejecuta Recalcular ahora para obtener yield y valuaciones spot/futuros.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Yield estimado</p>
+                    <p className="text-lg font-semibold">{prediction.predictedYieldTonHa.toFixed(2)} ton/ha</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Spot soja</p>
+                    <p className="text-lg font-semibold">{formatUsd(prediction.spotPriceUsdPerTon)} / ton</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Bruto spot</p>
+                    <p className="text-lg font-semibold">{formatUsd(prediction.grossSpotUsd)}</p>
+                  </div>
+                  <div className="rounded-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Neto spot</p>
+                    <p className={cn("text-lg font-semibold", prediction.netSpotUsd >= 0 ? "text-success" : "text-destructive")}>
+                      {formatUsd(prediction.netSpotUsd)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <div className="grid grid-cols-5 gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                    <span>Contrato</span>
+                    <span>Expira</span>
+                    <span>Precio/ton</span>
+                    <span>Bruto</span>
+                    <span>Neto</span>
+                  </div>
+                  <div className="space-y-0">
+                    {prediction.futuresValuations.map((row) => (
+                      <div key={row.symbol} className="grid grid-cols-5 gap-2 border-b px-3 py-2 text-sm last:border-b-0">
+                        <span>{row.label}</span>
+                        <span>{row.expiration}</span>
+                        <span>{formatUsd(row.priceUsdPerTon)}</span>
+                        <span>{formatUsd(row.grossUsd)}</span>
+                        <span className={cn(row.netUsd >= 0 ? "text-success" : "text-destructive")}>{formatUsd(row.netUsd)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Ultima actualizacion: {new Date(prediction.createdAt).toLocaleString("es-AR")}. Ventana satelital: {prediction.startDate} a {prediction.endDate}.
+                </p>
+                {prediction.warning ? <p className="text-xs text-warning">Aviso del modelo: {prediction.warning}</p> : null}
+              </div>
+            )}
+
+            {predictionError ? <p className="text-sm text-destructive">{predictionError}</p> : null}
+          </CardContent>
+        </Card>
 
         {/* Top cards */}
         <div className="grid grid-cols-3 gap-4">

@@ -16,8 +16,13 @@ FEATURE_META_PATH = os.path.join(MODELS_DIR, 'feature_columns.json')
 
 # ── Sentinel Hub credentials ───────────────────────────────────────────────────
 config = SHConfig(use_defaults=True)
-config.sh_client_id = 'f144b005-274c-4357-9333-8b51978ab22c'
-config.sh_client_secret = 'elQoOYvb1WRfkXI6n7ftoT9zsGXK0G1c'
+config.sh_client_id = os.getenv('SENTINEL_HUB_CLIENT_ID')
+config.sh_client_secret = os.getenv('SENTINEL_HUB_CLIENT_SECRET')
+
+if not config.sh_client_id or not config.sh_client_secret:
+    raise RuntimeError(
+        "Missing Sentinel Hub credentials. Set SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET."
+    )
 
 # ── Lazy globals ───────────────────────────────────────────────────────────────
 _model = None
