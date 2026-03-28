@@ -8,6 +8,11 @@ export async function createSupabaseServerClient() {
   const { supabaseUrl, supabaseKey } = getSupabaseServerEnv();
 
   return createServerClient<Database>(supabaseUrl, supabaseKey, {
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();

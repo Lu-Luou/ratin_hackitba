@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const Icon = ({ name, fill = 0, size = 24, className = "", style = {} }) => (
+const Icon = ({ name, fill = 0, size = 24, style = {} }) => (
   <span
     className="material-symbols-outlined"
     style={{ fontVariationSettings: `'FILL' ${fill}, 'wght' 400, 'GRAD' 0, 'opsz' ${size}`, ...style }}
@@ -12,12 +14,49 @@ const Icon = ({ name, fill = 0, size = 24, className = "", style = {} }) => (
 );
 
 export default function CampoIALogin() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", remember: false });
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submit", form);
+
+    if (!form.email.trim() || !form.password.trim()) {
+      setError("Completa email y password.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No se pudo iniciar sesion.");
+      }
+
+      router.push("/auth?message=Sesion%20iniciada%20correctamente.");
+      router.refresh();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo iniciar sesion.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -183,7 +222,7 @@ export default function CampoIALogin() {
 
       <div className="campoia-login">
         {/* Left Panel */}
-        <section style={{ position: "relative", display: "none", width: "40%", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--c-primary)", flexShrink: 0, ...(typeof window !== "undefined" && window.innerWidth >= 768 ? { display: "flex" } : {}) }}
+        <section style={{ position: "relative", display: "none", width: "40%", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--c-primary)", flexShrink: 0 }}
           className="left-panel">
           <style>{`
             @media (min-width: 768px) { .campoia-login .left-panel { display: flex !important; } }
@@ -247,6 +286,22 @@ export default function CampoIALogin() {
             <header>
               <h2 className="font-headline" style={{ fontSize: "2.25rem", fontWeight: 800, color: "var(--c-primary)", letterSpacing: "-0.03em", marginBottom: "0.5rem" }}>Welcome back</h2>
               <p style={{ color: "var(--c-on-surface-variant)", fontSize: "1.05rem" }}>Access your digital twin dashboard</p>
+              {error ? (
+                <p
+                  style={{
+                    marginTop: "0.9rem",
+                    padding: "0.7rem 0.9rem",
+                    borderRadius: "0.6rem",
+                    border: "1px solid rgba(85,49,18,0.22)",
+                    background: "rgba(85,49,18,0.08)",
+                    color: "var(--c-tertiary)",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {error}
+                </p>
+              ) : null}
             </header>
 
             {/* Form */}
@@ -263,6 +318,8 @@ export default function CampoIALogin() {
                     type="email"
                     className="field-input"
                     placeholder="agronomist@farm.com"
+                    required
+                    disabled={isSubmitting}
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                   />
@@ -285,11 +342,15 @@ export default function CampoIALogin() {
                     className="field-input"
                     style={{ paddingRight: "3rem" }}
                     placeholder="••••••••"
+                    required
+                    minLength={6}
+                    disabled={isSubmitting}
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   />
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => setShowPassword(v => !v)}
                     style={{ position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}
                   >
@@ -304,6 +365,7 @@ export default function CampoIALogin() {
                   id="remember"
                   type="checkbox"
                   checked={form.remember}
+                  disabled={isSubmitting}
                   onChange={e => setForm(f => ({ ...f, remember: e.target.checked }))}
                   style={{ width: "1.1rem", height: "1.1rem", accentColor: "var(--c-primary)", cursor: "pointer" }}
                 />
@@ -312,8 +374,8 @@ export default function CampoIALogin() {
                 </label>
               </div>
 
-              <button type="submit" className="btn-primary">
-                Sign In to Dashboard
+              <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign In to Dashboard"}
                 <Icon name="arrow_forward" className="arrow-icon" />
               </button>
             </form>
@@ -321,9 +383,9 @@ export default function CampoIALogin() {
             {/* Footer */}
             <p style={{ textAlign: "center", color: "var(--c-on-surface-variant)", fontSize: "0.95rem" }}>
               New to the field?{" "}
-              <a href="#" style={{ color: "var(--c-secondary)", fontWeight: 700, textDecoration: "none", marginLeft: "0.25rem" }}>
+              <Link href="/signup" style={{ color: "var(--c-secondary)", fontWeight: 700, textDecoration: "none", marginLeft: "0.25rem" }}>
                 Create an account
-              </a>
+              </Link>
             </p>
           </div>
 

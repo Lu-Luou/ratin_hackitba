@@ -21,6 +21,8 @@ model AppUser {
   id        String   @id @db.Uuid
   email     String   @unique
   role      Role     @default(USER)
+  name      String?  @db.Text
+  farmName  String?  @map("farm_name") @db.Text
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   todos     Todo[]

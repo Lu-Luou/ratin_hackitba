@@ -19,6 +19,16 @@ type SessionContext = {
   appUser: AppUser;
 };
 
+type RegistrationProfileInput = {
+  name?: string;
+  farmName?: string;
+};
+
+type EnsureAppUserOptions = {
+  requestedRole?: Role;
+  profile?: RegistrationProfileInput;
+};
+
 function toMetadataRole(role: Role): "user" | "admin" {
   return role === Role.ADMIN ? "admin" : "user";
 }
@@ -45,13 +55,24 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeOptionalText(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 async function resolveDefaultRole() {
   const usersCount = await prisma.appUser.count();
   return usersCount === 0 ? Role.ADMIN : Role.USER;
 }
 
-async function ensureAppUser(authUser: User, requestedRole?: Role) {
+async function ensureAppUser(authUser: User, options?: EnsureAppUserOptions) {
   const email = authUser.email?.trim().toLowerCase();
+  const name = normalizeOptionalText(options?.profile?.name ?? authUser.user_metadata?.full_name);
+  const farmName = normalizeOptionalText(options?.profile?.farmName ?? authUser.user_metadata?.farm_name);
 
   if (!email) {
     throw new SessionError(400, "El usuario autenticado no tiene email.");
@@ -62,23 +83,43 @@ async function ensureAppUser(authUser: User, requestedRole?: Role) {
   });
 
   if (existing) {
+    const updateData: {
+      email?: string;
+      name?: string;
+      farmName?: string;
+    } = {};
+
     if (existing.email !== email) {
+      updateData.email = email;
+    }
+
+    if (name !== undefined && existing.name !== name) {
+      updateData.name = name;
+    }
+
+    if (farmName !== undefined && existing.farmName !== farmName) {
+      updateData.farmName = farmName;
+    }
+
+    if (Object.keys(updateData).length > 0) {
       return prisma.appUser.update({
         where: { id: authUser.id },
-        data: { email },
+        data: updateData,
       });
     }
 
     return existing;
   }
 
-  const role = requestedRole ?? fromMetadataRole(authUser.app_metadata?.role) ?? (await resolveDefaultRole());
+  const role = options?.requestedRole ?? fromMetadataRole(authUser.app_metadata?.role) ?? (await resolveDefaultRole());
 
   return prisma.appUser.create({
     data: {
       id: authUser.id,
       email,
       role,
+      name,
+      farmName,
     },
   });
 }
@@ -102,6 +143,8 @@ export function serializeAppUser(appUser: AppUser) {
     id: appUser.id,
     email: appUser.email,
     role: appUser.role,
+    name: appUser.name,
+    farmName: appUser.farmName,
     createdAt: appUser.createdAt.toISOString(),
     updatedAt: appUser.updatedAt.toISOString(),
   };
@@ -129,8 +172,14 @@ export async function signInWithEmailPassword(email: string, password: string): 
   };
 }
 
-export async function registerWithEmailPassword(email: string, password: string): Promise<SessionContext> {
+export async function registerWithEmailPassword(
+  email: string,
+  password: string,
+  profile?: RegistrationProfileInput,
+): Promise<SessionContext> {
   const normalizedEmail = normalizeEmail(email);
+  const name = normalizeOptionalText(profile?.name);
+  const farmName = normalizeOptionalText(profile?.farmName);
   const role = await resolveDefaultRole();
   const adminClient = createSupabaseAdminClient();
 
@@ -146,6 +195,10 @@ export async function registerWithEmailPassword(email: string, password: string)
     email: normalizedEmail,
     password,
     email_confirm: true,
+    user_metadata: {
+      full_name: name,
+      farm_name: farmName,
+    },
     app_metadata: {
       role: toMetadataRole(role),
     },
@@ -171,7 +224,13 @@ export async function registerWithEmailPassword(email: string, password: string)
     email: normalizedEmail,
   });
 
-  const appUser = await ensureAppUser(user, role);
+  const appUser = await ensureAppUser(user, {
+    requestedRole: role,
+    profile: {
+      name,
+      farmName,
+    },
+  });
 
   console.info("[auth][register] Prisma app user ensured", {
     userId: appUser.id,

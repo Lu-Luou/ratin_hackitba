@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const Icon = ({ name, fill = 0, size = 24, style = {}, className = "" }) => (
@@ -20,18 +22,72 @@ const Field = ({ label, children }) => (
 );
 
 export default function CampoIASignUp() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "", email: "", farm: "", password: "", confirm: "", terms: false,
   });
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Sign up", form);
+
+    if (!form.name.trim() || !form.email.trim() || !form.farm.trim() || !form.password.trim()) {
+      setError("Completa todos los campos obligatorios.");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError("El password debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (form.password !== form.confirm) {
+      setError("La confirmacion de password no coincide.");
+      return;
+    }
+
+    if (!form.terms) {
+      setError("Debes aceptar terminos y privacidad para continuar.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          farmName: form.farm.trim(),
+          email: form.email.trim(),
+          password: form.password,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No se pudo crear la cuenta.");
+      }
+
+      router.push("/auth?message=Cuenta%20creada%20y%20sesion%20iniciada.");
+      router.refresh();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "No se pudo crear la cuenta.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -209,7 +265,7 @@ export default function CampoIASignUp() {
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ background: "rgba(247,250,245,0.1)", backdropFilter: "blur(12px)", padding: "1.5rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.1)" }}>
               <p style={{ fontStyle: "italic", color: "rgba(255,255,255,0.8)", marginBottom: "1rem", lineHeight: 1.6, fontSize: "0.9rem" }}>
-                "The precision of CampoIA's soil stratigraphy metrics completely changed our planting strategy this season."
+                {`"The precision of CampoIA's soil stratigraphy metrics completely changed our planting strategy this season."`}
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{ width: "2.5rem", height: "2.5rem", borderRadius: "50%", background: "var(--c-secondary-container)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -236,6 +292,22 @@ export default function CampoIASignUp() {
             <header style={{ marginBottom: "2.5rem", textAlign: "center" }}>
               <h2 className="font-headline" style={{ fontSize: "2rem", fontWeight: 700, color: "var(--c-on-surface)", marginBottom: "0.5rem", letterSpacing: "-0.02em" }}>Create your account</h2>
               <p style={{ color: "var(--c-on-surface-variant)" }}>Start your journey toward data-driven agriculture.</p>
+              {error ? (
+                <p
+                  style={{
+                    marginTop: "0.9rem",
+                    padding: "0.7rem 0.9rem",
+                    borderRadius: "0.6rem",
+                    border: "1px solid rgba(85,49,18,0.22)",
+                    background: "rgba(85,49,18,0.08)",
+                    color: "var(--c-tertiary)",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {error}
+                </p>
+              ) : null}
             </header>
 
             {/* Form */}
@@ -243,21 +315,21 @@ export default function CampoIASignUp() {
               <Field label="Full Name">
                 <div style={{ position: "relative" }}>
                   <Icon name="person" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="text" placeholder="John Doe" required value={form.name} onChange={set("name")} />
+                  <input className="tray-input tray-input-icon" type="text" placeholder="John Doe" required disabled={isSubmitting} value={form.name} onChange={set("name")} />
                 </div>
               </Field>
 
               <Field label="Email Address">
                 <div style={{ position: "relative" }}>
                   <Icon name="mail" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="email" placeholder="john@farm.com" required value={form.email} onChange={set("email")} />
+                  <input className="tray-input tray-input-icon" type="email" placeholder="john@farm.com" required disabled={isSubmitting} value={form.email} onChange={set("email")} />
                 </div>
               </Field>
 
               <Field label="Farm / Company Name">
                 <div style={{ position: "relative" }}>
                   <Icon name="domain" size={20} style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", color: "var(--c-outline)", fontSize: "1.1rem", pointerEvents: "none" }} />
-                  <input className="tray-input tray-input-icon" type="text" placeholder="Green Valley Estates" required value={form.farm} onChange={set("farm")} />
+                  <input className="tray-input tray-input-icon" type="text" placeholder="Green Valley Estates" required disabled={isSubmitting} value={form.farm} onChange={set("farm")} />
                 </div>
               </Field>
 
@@ -271,10 +343,12 @@ export default function CampoIASignUp() {
                       type={showPass ? "text" : "password"}
                       placeholder="••••••••"
                       required
+                      minLength={6}
+                      disabled={isSubmitting}
                       value={form.password}
                       onChange={set("password")}
                     />
-                    <button type="button" onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
+                    <button type="button" disabled={isSubmitting} onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
                       <Icon name={showPass ? "visibility_off" : "visibility"} size={20} style={{ fontSize: "1.1rem" }} />
                     </button>
                   </div>
@@ -289,10 +363,12 @@ export default function CampoIASignUp() {
                       type={showConfirm ? "text" : "password"}
                       placeholder="••••••••"
                       required
+                      minLength={6}
+                      disabled={isSubmitting}
                       value={form.confirm}
                       onChange={set("confirm")}
                     />
-                    <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
+                    <button type="button" disabled={isSubmitting} onClick={() => setShowConfirm(v => !v)} style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--c-outline)", display: "flex" }}>
                       <Icon name={showConfirm ? "visibility_off" : "visibility"} size={20} style={{ fontSize: "1.1rem" }} />
                     </button>
                   </div>
@@ -305,6 +381,7 @@ export default function CampoIASignUp() {
                   id="terms"
                   type="checkbox"
                   checked={form.terms}
+                  disabled={isSubmitting}
                   onChange={set("terms")}
                   required
                   style={{ width: "1.1rem", height: "1.1rem", marginTop: "0.15rem", accentColor: "var(--c-primary)", cursor: "pointer", flexShrink: 0 }}
@@ -317,15 +394,15 @@ export default function CampoIASignUp() {
                 </label>
               </div>
 
-              <button type="submit" className="btn-primary">
-                Create Account
+              <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? "Creating account..." : "Create Account"}
               </button>
             </form>
 
             <footer style={{ marginTop: "2.5rem", textAlign: "center" }}>
               <p style={{ color: "var(--c-on-surface-variant)" }}>
                 Already have an account?{" "}
-                <a href="#" style={{ color: "var(--c-primary)", fontWeight: 700, textDecoration: "none", marginLeft: "0.25rem" }}>Login here</a>
+                <Link href="/login" style={{ color: "var(--c-primary)", fontWeight: 700, textDecoration: "none", marginLeft: "0.25rem" }}>Login here</Link>
               </p>
             </footer>
           </div>
