@@ -20,13 +20,32 @@ function readCredentials(formData: FormData) {
   return { email, password };
 }
 
-function readOptionalProfile(formData: FormData) {
+function readSignUpPayload(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "").trim();
+  const confirmPassword = String(formData.get("confirmPassword") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const farmName = String(formData.get("farmName") ?? "").trim();
 
+  if (!email || !password || !name || !farmName) {
+    redirectWithMessage("Completa nombre, farm, email y password.");
+  }
+
+  if (password.length < 6) {
+    redirectWithMessage("El password debe tener al menos 6 caracteres.");
+  }
+
+  if (password !== confirmPassword) {
+    redirectWithMessage("La confirmacion de password no coincide.");
+  }
+
   return {
-    name: name || undefined,
-    farmName: farmName || undefined,
+    email,
+    password,
+    profile: {
+      name,
+      farmName,
+    },
   };
 }
 
@@ -46,8 +65,7 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  const { email, password } = readCredentials(formData);
-  const profile = readOptionalProfile(formData);
+  const { email, password, profile } = readSignUpPayload(formData);
   try {
     await registerWithEmailPassword(email, password, profile);
   } catch (error) {

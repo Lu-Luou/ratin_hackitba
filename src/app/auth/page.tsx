@@ -96,6 +96,8 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
                 id="signup-name"
                 name="name"
                 type="text"
+                required
+                minLength={2}
                 className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-teal-400/30 placeholder:text-zinc-500 focus:ring"
                 placeholder="Tu nombre"
               />
@@ -106,6 +108,8 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
                 id="signup-farm-name"
                 name="farmName"
                 type="text"
+                required
+                minLength={2}
                 className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-teal-400/30 placeholder:text-zinc-500 focus:ring"
                 placeholder="Nombre de la farm"
               />
@@ -128,8 +132,21 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
                 name="password"
                 type="password"
                 required
+                minLength={6}
                 className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-teal-400/30 placeholder:text-zinc-500 focus:ring"
                 placeholder="Minimo 6 caracteres"
+              />
+              <label className="mt-3 block text-xs uppercase tracking-wide text-zinc-400" htmlFor="signup-confirm-password">
+                Confirmar Password
+              </label>
+              <input
+                id="signup-confirm-password"
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={6}
+                className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-teal-400/30 placeholder:text-zinc-500 focus:ring"
+                placeholder="Repite tu password"
               />
               <button
                 type="submit"
