@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "@/app/auth/actions";
+import { Suspense } from "react";
 
 const Icon = ({ name, fill = 0, size = 24, style = {} }) => (
   <span
@@ -14,7 +15,7 @@ const Icon = ({ name, fill = 0, size = 24, style = {} }) => (
   </span>
 );
 
-export default function CampoIALogin() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const message = searchParams.get("message") ?? "";
@@ -356,5 +357,13 @@ export default function CampoIALogin() {
         <Icon name="help_outline" />
       </button>
     </>
+  );
+}
+
+export default function CampoIALogin() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#f7faf5" }} />}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { Suspense } from "react";
 import { signUp } from "@/app/auth/actions";
 
 const Icon = ({ name, fill = 0, size = 24, style = {}, className = "" }) => (
@@ -22,7 +23,7 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-export default function CampoIASignUp() {
+function SignUpContent() {
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
     name: "", email: "", farm: "", password: "", confirm: "", terms: false,
@@ -383,5 +384,13 @@ export default function CampoIASignUp() {
         </main>
       </div>
     </>
+  );
+}
+
+export default function CampoIASignUp() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#f7faf5" }} />}>
+      <SignUpContent />
+    </Suspense>
   );
 }

@@ -28,6 +28,8 @@ type SoyPricing = {
   spotPriceUsdPerTon: number;
   futures: SoyFuturesContract[];
   fetchedAt: string;
+  source: string;
+  warning?: string;
 };
 
 export async function fetchSoyPricing(contractCount = 3): Promise<SoyPricing> {
@@ -38,5 +40,6 @@ export async function fetchSoyPricing(contractCount = 3): Promise<SoyPricing> {
     spotPriceUsdPerTon: MOCK_SPOT_PRICE_USD_PER_TON,
     futures,
     fetchedAt: new Date().toISOString(),
+    source: "yahoo",
   };
 }
