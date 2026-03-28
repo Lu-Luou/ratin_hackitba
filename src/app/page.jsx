@@ -13,11 +13,48 @@ const Icon = ({ name, className = "" }) => (
 
 export default function CampoIA() {
   const [scrolled, setScrolled] = useState(false);
+  const [sessionUser, setSessionUser] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSessionUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          if (isMounted) {
+            setSessionUser(null);
+          }
+          return;
+        }
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (isMounted && payload?.user) {
+          setSessionUser(payload.user);
+        }
+      } catch {
+        if (isMounted) {
+          setSessionUser(null);
+        }
+      }
+    };
+
+    loadSessionUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -124,11 +161,23 @@ export default function CampoIA() {
                 onMouseEnter={e => e.target.style.color = "var(--color-primary)"}
                 onMouseLeave={e => e.target.style.color = "var(--color-on-surface-variant)"}>Pricing</a>
             </div>
-            <button style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", padding: "0.625rem 1.5rem", borderRadius: "0.5rem", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "0.95rem", transition: "transform 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "scale(0.97)"}
-              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
-              Get Started
-            </button>
+            {sessionUser ? (
+              <button
+                title={sessionUser?.email ? `Usuario: ${sessionUser.email}` : "Usuario autenticado"}
+                style={{ background: "var(--color-secondary)", color: "var(--color-on-secondary)", padding: "0.625rem 1.5rem", borderRadius: "0.5rem", fontWeight: 600, border: "none", cursor: "default", fontSize: "0.95rem", transition: "transform 0.15s" }}
+                onClick={() => {}}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(0.97)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+              >
+                {sessionUser?.name ? `${sessionUser.name}` : "name"}
+              </button>
+            ) : (
+              <button style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", padding: "0.625rem 1.5rem", borderRadius: "0.5rem", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "0.95rem", transition: "transform 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(0.97)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                Get Started
+              </button>
+            )}
           </div>
         </nav>
 
