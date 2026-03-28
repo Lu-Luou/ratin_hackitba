@@ -1,9 +1,30 @@
 {
+
   "version": 2,
-  "crons": [
+
+
+  "builds": [
+
     {
-      "path": "/api/cron/nightly-predictions",
-      "schedule": "0 1 * * *"
+
+      "src": "api/predict.py",
+
+      "use": "@vercel/python"
+
     }
+
+  ],
+
+  "routes": [
+
+    {
+
+      "src": "^/predict$",
+
+      "dest": "api/predict.py"
+
+    }
+
   ]
+
 }
