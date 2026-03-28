@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AlertsApiResponse, WeatherAlertItem } from "@/types/alert";
 
-function getAlertsTone(totalAlerts: number) {
-  if (totalAlerts > 8) {
+function getAlertsTone(totalAlertPoints: number) {
+  if (totalAlertPoints > 8) {
     return {
       gradientClass: "from-red-600 to-rose-500",
       haloClass: "shadow-[0_0_0_1px_rgba(220,38,38,0.28),0_8px_24px_-12px_rgba(220,38,38,0.75)]",
@@ -18,7 +18,7 @@ function getAlertsTone(totalAlerts: number) {
     };
   }
 
-  if (totalAlerts >= 5) {
+  if (totalAlertPoints >= 5) {
     return {
       gradientClass: "from-orange-500 to-amber-500",
       haloClass: "shadow-[0_0_0_1px_rgba(249,115,22,0.25),0_8px_24px_-12px_rgba(249,115,22,0.75)]",
@@ -27,7 +27,7 @@ function getAlertsTone(totalAlerts: number) {
     };
   }
 
-  if (totalAlerts >= 2) {
+  if (totalAlertPoints >= 2) {
     return {
       gradientClass: "from-yellow-500 to-amber-400",
       haloClass: "shadow-[0_0_0_1px_rgba(234,179,8,0.24),0_8px_24px_-12px_rgba(234,179,8,0.72)]",
@@ -54,8 +54,11 @@ export function TopBar() {
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [isAlertsToastOpen, setIsAlertsToastOpen] = useState(false);
 
-  const totalAlerts = alerts.length;
-  const alertsTone = useMemo(() => getAlertsTone(totalAlerts), [totalAlerts]);
+  const totalAlertPoints = useMemo(
+    () => alerts.reduce((sum, alert) => sum + Math.max(0, alert.priorityScore), 0),
+    [alerts],
+  );
+  const alertsTone = useMemo(() => getAlertsTone(totalAlertPoints), [totalAlertPoints]);
 
   const fetchAlerts = useCallback(async () => {
     setIsLoadingAlerts(true);
@@ -154,7 +157,7 @@ export function TopBar() {
             {alertsError ? <AlertTriangle className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
             ALERTS
             <span className={cn("h-2 w-2 rounded-full", alertsTone.dotClass)} aria-hidden="true" />
-            <span className="rounded-full bg-black/15 px-2 py-0.5 text-xs font-bold tabular-nums">{totalAlerts}</span>
+            <span className="rounded-full bg-black/15 px-2 py-0.5 text-xs font-bold tabular-nums">{totalAlertPoints} pts</span>
             <span className="hidden text-[10px] uppercase tracking-wide text-white/85 md:inline">{alertsTone.label}</span>
           </span>
         </button>
