@@ -6,7 +6,13 @@ import type { Database } from "@/types/database";
 const PUBLIC_API_PATHS = new Set(["/api/auth/register", "/api/auth/login"]);
 
 function isPublicPage(pathname: string) {
-  return pathname === "/" || pathname.startsWith("/auth") || pathname.startsWith("/login") || pathname.startsWith("/signup");
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/home") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup")
+  );
 }
 
 function isApiPath(pathname: string) {

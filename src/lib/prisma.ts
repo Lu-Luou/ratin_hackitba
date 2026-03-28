@@ -7,6 +7,12 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
+function hasExpectedDelegates(client: PrismaClient) {
+  const candidate = client as unknown as Record<string, unknown>;
+
+  return Boolean(candidate.appUser && candidate.todo && candidate.field);
+}
+
 const databaseUrl = process.env.DATABASE_URL_POOLER?.trim() || process.env.DATABASE_URL;
 const usingPooler = Boolean(process.env.DATABASE_URL_POOLER?.trim());
 
@@ -51,7 +57,17 @@ const adapter = new PrismaPg(pool, {
   },
 });
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+function createClient() {
+  return new PrismaClient({ adapter });
+}
+
+const cachedPrisma = globalForPrisma.prisma;
+
+export const prisma = cachedPrisma && hasExpectedDelegates(cachedPrisma) ? cachedPrisma : createClient();
+
+if (cachedPrisma && cachedPrisma !== prisma) {
+  console.warn("[prisma] Cached client was stale after schema update. Reinitialized PrismaClient.");
+}
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

@@ -61,7 +61,7 @@ export async function signIn(formData: FormData) {
     redirectWithMessage("No se pudo iniciar sesion.");
   }
 
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function signUp(formData: FormData) {
@@ -91,7 +91,7 @@ export async function signUp(formData: FormData) {
     redirectWithMessage("No se pudo crear la cuenta.");
   }
 
-  redirectWithMessage("Cuenta creada. Ya puedes iniciar sesion sin confirmar email.");
+  redirect("/dashboard");
 }
 
 export async function signOut() {
