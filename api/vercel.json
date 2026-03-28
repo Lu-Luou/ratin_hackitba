@@ -7,7 +7,7 @@
 
     {
 
-      "src": "api/predict.py",
+      "src": "py/predict.py",
 
       "use": "@vercel/python"
 
@@ -19,9 +19,9 @@
 
     {
 
-      "src": "/predict",
+      "src": "/py/predict",
 
-      "dest": "api/predict.py"
+      "dest": "py/predict.py"
 
     }
 

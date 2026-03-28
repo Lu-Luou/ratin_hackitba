@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, '..', 'models')
+MODELS_DIR = os.path.join(BASE_DIR, '..', '..', 'models')
 MODEL_PATH = os.path.join(MODELS_DIR, 'ar_yield_regressor.joblib')
 FEATURE_META_PATH = os.path.join(MODELS_DIR, 'feature_columns.json')
 

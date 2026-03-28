@@ -54,9 +54,11 @@ export async function predictYieldFromBbox(input: PredictFromBboxInput): Promise
     headers.Cookie = input.cookieHeader;
   }
 
+  const baseUrl = input.origin.replace(/\/$/, "");
+
   console.log(`[PREDICTION] Sending request to prediction API with bbox: ${input.bbox} and date range: ${input.startDate} to ${input.endDate}`);
 
-  const response = await fetch(`https://null-profits-jet.vercel.app/predict`, {
+  const response = await fetch(`${baseUrl}/py/predict`, {
     method: "POST",
     headers,
     cache: "no-store",

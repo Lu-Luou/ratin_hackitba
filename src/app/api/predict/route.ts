@@ -83,14 +83,14 @@ export async function GET(): Promise<NextResponse> {
 function getPythonApiUrl(request: NextRequest): string {
   // Check for explicit Python API URL in environment
   if (process.env.PYTHON_API_URL) {
-    return `${process.env.PYTHON_API_URL}/predict`;
+    return `${process.env.PYTHON_API_URL.replace(/\/$/, "")}/predict`;
   }
 
   // In Vercel production, the Python handler is accessible via relative URL
   // (Vercel merges both Next.js and Python endpoints)
   if (process.env.VERCEL) {
     const origin = request.nextUrl.origin;
-    return `${origin}/predict`;
+    return `${origin}/py/predict`;
   }
 
   // Fallback: try localhost Python API on default port (5000)
