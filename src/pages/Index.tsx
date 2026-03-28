@@ -4,10 +4,11 @@ import { FieldCard } from "@/components/dashboard/FieldCard";
 import { AddFieldDialog } from "@/components/dashboard/AddFieldDialog";
 import { FieldDetail } from "@/components/field/FieldDetail";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 export default function Index({ filter }: { filter?: string }) {
-  const { fields, selectedField, setSelectedField } = useFields();
+  const { fields, isLoading, error, refreshFields, selectedField, setSelectedField } = useFields();
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -39,6 +40,27 @@ export default function Index({ filter }: { filter?: string }) {
     return <FieldDetail field={selectedField} onBack={() => setSelectedField(null)} />;
   }
 
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="rounded-xl border border-border/60 bg-card p-6 text-sm text-muted-foreground">Cargando campos...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 space-y-3">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button type="button" variant="outline" onClick={() => void refreshFields()}>
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="relative max-w-md">
@@ -57,6 +79,12 @@ export default function Index({ filter }: { filter?: string }) {
         ))}
         <AddFieldDialog />
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-border/60 bg-card p-6 text-sm text-muted-foreground">
+          No hay campos cargados todavia para este usuario.
+        </div>
+      ) : null}
     </div>
   );
 }

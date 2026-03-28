@@ -26,8 +26,32 @@ model AppUser {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   todos     Todo[]
+  fields    Field[]
 
   @@map("app_users")
+}
+
+model Field {
+  id                   String   @id @default(cuid())
+  name                 String   @db.Text
+  location             String   @default("Sin definir") @db.Text
+  hectares             Int
+  score                Int      @default(50)
+  scoreTrend           Int      @default(0) @map("score_trend")
+  monthlyRevenueChange Float    @default(0) @map("monthly_revenue_change")
+  revenueHistory       Json     @map("revenue_history")
+  yieldHistory         Json     @map("yield_history")
+  repayment            Json
+  risk                 Json
+  zone                 String   @default("Sin definir") @db.Text
+  userId               String   @map("user_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                 AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("fields")
 }
 
 model Todo {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FieldProfile } from "@/data/mockFields";
+import type { FieldProfile } from "@/types/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Send } from "lucide-react";
@@ -38,7 +38,7 @@ export function FieldChatPanel({ field, onClose }: { field: FieldProfile; onClos
   };
 
   return (
-    <div className="fixed bottom-24 right-6 w-96 h-[480px] bg-card border rounded-xl shadow-xl flex flex-col z-50">
+    <div className="fixed bottom-24 right-6 w-96 h-120 bg-card border rounded-xl shadow-xl flex flex-col z-50">
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <span className="font-display font-semibold text-sm text-foreground">Chat — {field.name}</span>
         <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">

@@ -12,21 +12,38 @@ export function AddFieldDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [hectares, setHectares] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !hectares) return;
-    addField(name.trim(), Number(hectares));
-    setName("");
-    setHectares("");
-    setOpen(false);
+    const parsedHectares = Number(hectares);
+
+    if (!name.trim() || !Number.isFinite(parsedHectares) || parsedHectares <= 0) {
+      setError("Completa nombre y una superficie valida.");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await addField(name.trim(), parsedHectares);
+      setName("");
+      setHectares("");
+      setOpen(false);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "No se pudo crear el campo.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Card className="cursor-pointer border-dashed border-2 border-border hover:border-primary/40 transition-colors group">
-          <CardContent className="p-5 flex flex-col items-center justify-center h-full min-h-[120px] gap-2">
+          <CardContent className="p-5 flex flex-col items-center justify-center h-full min-h-30 gap-2">
             <Plus className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
             <span className="text-sm text-muted-foreground group-hover:text-foreground font-medium">Agregar campo</span>
           </CardContent>
@@ -43,9 +60,19 @@ export function AddFieldDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="hectares">Superficie (ha)</Label>
-            <Input id="hectares" type="number" value={hectares} onChange={(e) => setHectares(e.target.value)} placeholder="Ej: 500" />
+            <Input
+              id="hectares"
+              type="number"
+              min={1}
+              value={hectares}
+              onChange={(e) => setHectares(e.target.value)}
+              placeholder="Ej: 500"
+            />
           </div>
-          <Button type="submit" className="w-full">Crear campo</Button>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Creando..." : "Crear campo"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

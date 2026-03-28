@@ -1,4 +1,4 @@
-import { FieldProfile } from "@/data/mockFields";
+import type { FieldProfile } from "@/types/field";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";

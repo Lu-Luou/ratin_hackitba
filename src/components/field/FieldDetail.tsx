@@ -1,4 +1,4 @@
-import { FieldProfile } from "@/data/mockFields";
+import type { FieldProfile } from "@/types/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle } from "lucide-react
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useState } from "react";
+import { useFields } from "@/context/FieldsContext";
 import { FieldChatPanel } from "./FieldChatPanel";
 
 function riskBadgeVariant(level: string): "default" | "secondary" | "destructive" {
@@ -16,7 +17,86 @@ function riskBadgeVariant(level: string): "default" | "secondary" | "destructive
 }
 
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
+  const { updateField, deleteField } = useFields();
   const [chatOpen, setChatOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function handleUpdate() {
+    if (isUpdating || isDeleting) {
+      return;
+    }
+
+    const nextName = window.prompt("Nuevo nombre del campo", field.name);
+
+    if (nextName === null) {
+      return;
+    }
+
+    const nextHectaresRaw = window.prompt("Superficie (ha)", String(field.hectares));
+
+    if (nextHectaresRaw === null) {
+      return;
+    }
+
+    const nextHectares = Number(nextHectaresRaw);
+
+    if (!nextName.trim() || !Number.isFinite(nextHectares) || nextHectares <= 0) {
+      setActionError("Nombre y superficie deben ser validos.");
+      return;
+    }
+
+    const nextLocation = window.prompt("Ubicacion", field.location);
+    if (nextLocation === null) {
+      return;
+    }
+
+    const nextZone = window.prompt("Zona", field.zone);
+    if (nextZone === null) {
+      return;
+    }
+
+    setActionError(null);
+    setIsUpdating(true);
+
+    try {
+      await updateField(field.id, {
+        name: nextName.trim(),
+        hectares: Math.round(nextHectares),
+        location: nextLocation.trim() || "Sin definir",
+        zone: nextZone.trim() || "Sin definir",
+      });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudo actualizar el campo.");
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (isDeleting || isUpdating) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Eliminar el campo \"${field.name}\"? Esta accion no se puede deshacer.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setActionError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteField(field.id);
+      onBack();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "No se pudo eliminar el campo.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div className="relative min-h-full">
@@ -26,11 +106,22 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h2 className="text-2xl font-display font-bold text-foreground">{field.name}</h2>
             <p className="text-sm text-muted-foreground">{field.location} · {field.hectares} ha</p>
           </div>
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => void handleUpdate()} disabled={isUpdating || isDeleting}>
+              {isUpdating ? "Guardando..." : "Editar"}
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={isUpdating || isDeleting}>
+              {isDeleting ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </div>
         </div>
+
+        {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
 
         {/* Top cards */}
         <div className="grid grid-cols-3 gap-4">
