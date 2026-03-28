@@ -5,4 +5,4 @@ numpy==1.26.4
 joblib==1.4.0
 pydantic==2.7.1
 mangum==0.17.0
-sentinelhub
+sentinelhub==3.11.5
