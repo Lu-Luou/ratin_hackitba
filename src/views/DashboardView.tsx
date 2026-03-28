@@ -5,7 +5,7 @@ import { FieldDetail } from "@/components/field/FieldDetail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFields } from "@/context/FieldsContext";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 
 export default function DashboardView({ filter }: { filter?: string }) {
   const { fields, isLoading, error, refreshFields, selectedField, setSelectedField } = useFields();
@@ -37,6 +37,11 @@ export default function DashboardView({ filter }: { filter?: string }) {
 
     return result;
   }, [fields, search, filter]);
+
+  const isRiskFilter = filter === "risk";
+  const hasAnyFields = fields.length > 0;
+  const showHealthyRiskState = isRiskFilter && hasAnyFields && filtered.length === 0 && search.trim().length === 0;
+  const showAddFieldDialog = !(showHealthyRiskState);
 
   if (selectedField) {
     return <FieldDetail field={selectedField} onBack={() => setSelectedField(null)} />;
@@ -79,13 +84,27 @@ export default function DashboardView({ filter }: { filter?: string }) {
         {filtered.map((field) => (
           <FieldCard key={field.id} field={field} onClick={() => setSelectedField(field)} />
         ))}
-        <AddFieldDialog />
+        {showAddFieldDialog ? <AddFieldDialog /> : null}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-border/60 bg-card p-6 text-sm text-muted-foreground">
-          No hay campos cargados todavia para este usuario.
-        </div>
+        showHealthyRiskState ? (
+          <div className="rounded-xl border border-success/30 bg-success/10 p-6">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-success" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-success">Todo en orden</p>
+                <p className="text-sm text-foreground/80">No hay campos en alto riesgo. Todo en orden!!</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border/60 bg-card p-6 text-sm text-muted-foreground">
+            {search.trim().length > 0 && hasAnyFields
+              ? "No se encontraron campos con ese criterio."
+              : "No hay campos cargados todavia para este usuario."}
+          </div>
+        )
       ) : null}
     </div>
   );
