@@ -40,7 +40,7 @@ function deriveSupabaseUrlFromDatabaseUrl(): string | undefined {
 
     // Pooler host can encode project ref in username: postgres.<project-ref>
     if (host.endsWith(".pooler.supabase.com")) {
-      const [_, projectRef] = parsed.username.split(".");
+      const [, projectRef] = parsed.username.split(".");
       if (projectRef) {
         return `https://${projectRef}.supabase.co`;
       }
@@ -81,6 +81,22 @@ export function getSupabaseServerEnv() {
   return {
     supabaseUrl: normalizeUrl(supabaseUrl),
     supabaseKey,
+  };
+}
+
+export function getSupabaseAdminEnv() {
+  const supabaseUrl = firstNonEmpty(SUPABASE_URL_KEYS) ?? deriveSupabaseUrlFromDatabaseUrl();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      "Missing Supabase admin environment variables. Configure DATABASE_URL + SUPABASE_SERVICE_ROLE_KEY.",
+    );
+  }
+
+  return {
+    supabaseUrl: normalizeUrl(supabaseUrl),
+    serviceRoleKey,
   };
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { SessionError, registerWithEmailPassword, signInWithEmailPassword } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function redirectWithMessage(message: string) {
@@ -21,15 +22,14 @@ function readCredentials(formData: FormData) {
 
 export async function signIn(formData: FormData) {
   const { email, password } = readCredentials(formData);
-  const supabase = await createSupabaseServerClient();
+  try {
+    await signInWithEmailPassword(email, password);
+  } catch (error) {
+    if (error instanceof SessionError) {
+      redirectWithMessage(error.message);
+    }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    redirectWithMessage(error.message);
+    redirectWithMessage("No se pudo iniciar sesion.");
   }
 
   redirect("/");
@@ -37,22 +37,32 @@ export async function signIn(formData: FormData) {
 
 export async function signUp(formData: FormData) {
   const { email, password } = readCredentials(formData);
-  const supabase = await createSupabaseServerClient();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  try {
+    await registerWithEmailPassword(email, password);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${siteUrl}/auth/callback`,
-    },
-  });
+    console.error("[auth][signUp] Register failed", {
+      email,
+      isSessionError: error instanceof SessionError,
+      status: error instanceof SessionError ? error.status : undefined,
+      message,
+    });
 
-  if (error) {
-    redirectWithMessage(error.message);
+    if (error instanceof SessionError) {
+      redirectWithMessage(error.message);
+    }
+
+    if (message.includes("ENETUNREACH")) {
+      redirectWithMessage(
+        "No se pudo conectar a la base de datos. Configura DATABASE_URL_POOLER con la URL de Pooler de Supabase.",
+      );
+    }
+
+    redirectWithMessage("No se pudo crear la cuenta.");
   }
 
-  redirectWithMessage("Cuenta creada. Revisa tu email para confirmar la cuenta.");
+  redirectWithMessage("Cuenta creada. Ya puedes iniciar sesion sin confirmar email.");
 }
 
 export async function signOut() {
