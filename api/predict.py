@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import requests
 from sentinelhub import SHConfig, SentinelHubSession
+from http.server import BaseHTTPRequestHandler
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -258,152 +259,56 @@ def main():
 
 # ── Vercel handler ─────────────────────────────────────────────────────────────
 
-def handler(request, response):
-    """Vercel entrypoint: HTTP request -> JSON response.
+class handler(BaseHTTPRequestHandler):
 
-    Expects:
-      - GET /health → {"status": "ok"}
-      - POST with JSON body:
-          {"bbox": [...], "start_date"?, "end_date"?}
-        or
-          {"features": { ... }}
-    """
-    try:
-        # --- health check (GET /health) --------------------------------------
-        try:
-            method = getattr(request, "method", None)
-            if method is None and isinstance(request, dict):
-                method = request.get("method")
-        except Exception:
-            method = None
+    def do_GET(self):
+        self._respond(200, {"status": "ok", "message": "POST a bbox to get yield predictions."})
 
-        try:
-            path = getattr(request, "path", None) or getattr(request, "url", None)
-            if isinstance(request, dict):
-                path = request.get("path") or request.get("url") or path
-        except Exception:
-            path = None
-
-        if method == "GET" and path and "/health" in str(path):
-            data = {"status": "ok"}
-            try:
-                response.status_code = 200
-            except Exception:
-                pass
-            try:
-                headers = getattr(response, "headers", None)
-                if headers is not None:
-                    headers["Content-Type"] = "application/json"
-            except Exception:
-                pass
-            body_str = json.dumps(data)
-            if hasattr(response, "set_body"):
-                response.set_body(body_str)
-            elif hasattr(response, "body"):
-                response.body = body_str
-            return response
-
-        # --- normal prediction endpoint --------------------------------------
-        # Extract raw body from common Vercel Python request shapes
-        try:
-            if isinstance(request, dict):
-                body = request.get("body")
-            else:
-                body = getattr(request, "body", None)
-        except Exception:
-            body = None
-
-        if isinstance(body, (bytes, bytearray)):
-            raw = body.decode("utf-8")
-        elif isinstance(body, str):
-            raw = body
-        elif body is not None:
-            raw = json.dumps(body)
-        else:
-            raw = ""
+    def do_POST(self):
+        length  = int(self.headers.get('Content-Length', 0))
+        raw     = self.rfile.read(length).decode('utf-8')
 
         try:
             payload = json.loads(raw) if raw else {}
         except json.JSONDecodeError:
             payload = {}
 
-        # Same logic as main(), but for HTTP
-        if isinstance(payload, dict) and "bbox" in payload:
-            bbox = payload["bbox"]  # [min_lon, min_lat, max_lon, max_lat]
-            try:
+        try:
+            if "bbox" in payload:
+                bbox   = payload["bbox"]
                 result = predict_from_bbox(
-                    min_lon=bbox[0],
-                    min_lat=bbox[1],
-                    max_lon=bbox[2],
-                    max_lat=bbox[3],
-                    start_date=payload.get("start_date", "2024-07-15"),
-                    end_date=payload.get("end_date",   "2024-08-15"),
+                    min_lon    = bbox[0],
+                    min_lat    = bbox[1],
+                    max_lon    = bbox[2],
+                    max_lat    = bbox[3],
+                    start_date = payload.get("start_date", "2023-11-01"),
+                    end_date   = payload.get("end_date",   "2024-04-30"),
                 )
-                status_code = 200
-                data = result
-            except Exception as e:
-                status_code = 500
-                data = {"error": str(e)}
-        else:
-            # Legacy: raw feature dict passed directly
-            features = payload.get("features", payload)
-            if not isinstance(features, dict):
-                status_code = 400
-                data = {"error": "Expected JSON with 'bbox' or feature dict."}
+                self._respond(200, result)
             else:
-                try:
-                    preds = predict_from_partial_features(features)
-                    status_code = 200
-                    data = {"predictions": preds}
-                except Exception as e:
-                    status_code = 500
-                    data = {"error": str(e)}
+                features = payload.get("features", payload)
+                if not isinstance(features, dict):
+                    self._respond(400, {"error": "Expected JSON with 'bbox' or feature dict."})
+                    return
+                preds = predict_from_partial_features(features)
+                self._respond(200, {"predictions": preds})
 
-        # Write JSON response for Vercel
-        try:
-            response.status_code = status_code
-        except Exception:
-            pass
+        except ValueError as e:
+            self._respond(422, {"error": str(e)})
+        except Exception as e:
+            self._respond(500, {"error": str(e)})
 
-        try:
-            headers = getattr(response, "headers", None)
-            if headers is not None:
-                headers["Content-Type"] = "application/json"
-        except Exception:
-            pass
+    def _respond(self, status: int, body: dict):
+        encoded = json.dumps(body).encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type',   'application/json')
+        self.send_header('Content-Length', str(len(encoded)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(encoded)
 
-        body_str = json.dumps(data)
-        if hasattr(response, "set_body"):
-            response.set_body(body_str)
-        elif hasattr(response, "body"):
-            response.body = body_str
-
-        return response
-
-    except Exception as e:
-        # Fallback if something above failed
-        try:
-            response.status_code = 500
-        except Exception:
-            pass
-
-        try:
-            headers = getattr(response, "headers", None)
-            if headers is not None:
-                headers["Content-Type"] = "application/json"
-        except Exception:
-            pass
-
-        err_str = json.dumps({"error": str(e)})
-        if hasattr(response, "set_body"):
-            response.set_body(err_str)
-        elif hasattr(response, "body"):
-            response.body = err_str
-
-        return response
-
-app = handler
-application = handler
+    def log_message(self, format, *args):
+        pass  # silence default Apache-style request logs
 
 if __name__ == '__main__':
     result = predict_from_bbox(-62.45, -27.65, -62.44, -27.64, "2022-11-01", "2023-04-30")  
