@@ -23,7 +23,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">Acceso con Supabase</h1>
         <p className="mt-3 text-sm text-zinc-300">
-          Usa email y password. Si te registras, revisa el correo para confirmar la cuenta.
+          Usa email y password. El registro inicia sesion sin confirmacion de correo.
         </p>
 
         {message ? (
