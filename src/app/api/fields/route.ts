@@ -12,6 +12,8 @@ const createFieldSchema = z.object({
   hectares: z.number().int().positive().max(100_000),
   location: z.string().trim().min(2).max(160).optional(),
   zone: z.string().trim().min(2).max(120).optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
 });
 
 export async function GET() {
@@ -48,6 +50,8 @@ export async function POST(request: Request) {
         name: body.name,
         hectares: body.hectares,
         location: body.location ?? "Sin definir",
+        latitude: body.latitude ?? null,
+        longitude: body.longitude ?? null,
         zone: body.zone ?? "Sin definir",
         score: stats.score,
         scoreTrend: stats.scoreTrend,

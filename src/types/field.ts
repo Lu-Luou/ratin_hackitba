@@ -31,6 +31,8 @@ export interface FieldProfile {
   id: string;
   name: string;
   location: string;
+  latitude: number | null;
+  longitude: number | null;
   hectares: number;
   score: number;
   scoreTrend: number;

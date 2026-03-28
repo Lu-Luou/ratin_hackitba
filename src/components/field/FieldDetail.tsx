@@ -57,6 +57,41 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
       return;
     }
 
+    const nextLatitudeRaw = window.prompt(
+      "Latitud (deja vacio para quitarla)",
+      field.latitude !== null ? String(field.latitude) : "",
+    );
+    if (nextLatitudeRaw === null) {
+      return;
+    }
+
+    const nextLongitudeRaw = window.prompt(
+      "Longitud (deja vacio para quitarla)",
+      field.longitude !== null ? String(field.longitude) : "",
+    );
+    if (nextLongitudeRaw === null) {
+      return;
+    }
+
+    const parsedLatitude = nextLatitudeRaw.trim().length > 0 ? Number(nextLatitudeRaw) : null;
+    const parsedLongitude = nextLongitudeRaw.trim().length > 0 ? Number(nextLongitudeRaw) : null;
+
+    if (
+      parsedLatitude !== null &&
+      (!Number.isFinite(parsedLatitude) || parsedLatitude < -90 || parsedLatitude > 90)
+    ) {
+      setActionError("La latitud debe estar entre -90 y 90.");
+      return;
+    }
+
+    if (
+      parsedLongitude !== null &&
+      (!Number.isFinite(parsedLongitude) || parsedLongitude < -180 || parsedLongitude > 180)
+    ) {
+      setActionError("La longitud debe estar entre -180 y 180.");
+      return;
+    }
+
     setActionError(null);
     setIsUpdating(true);
 
@@ -66,6 +101,8 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
         hectares: Math.round(nextHectares),
         location: nextLocation.trim() || "Sin definir",
         zone: nextZone.trim() || "Sin definir",
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
       });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "No se pudo actualizar el campo.");
@@ -109,6 +146,9 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
           <div className="flex-1">
             <h2 className="text-2xl font-display font-bold text-foreground">{field.name}</h2>
             <p className="text-sm text-muted-foreground">{field.location} · {field.hectares} ha</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Coordenadas: {field.latitude !== null && field.longitude !== null ? `${field.latitude}, ${field.longitude}` : "Sin definir"}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">

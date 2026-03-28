@@ -16,6 +16,8 @@ const updateFieldSchema = z
     hectares: z.number().int().positive().max(100_000).optional(),
     location: z.string().trim().min(2).max(160).optional(),
     zone: z.string().trim().min(2).max(120).optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Debes enviar al menos un campo para actualizar.",
@@ -60,6 +62,8 @@ export async function PUT(request: Request, context: RouteContext) {
         hectares: body.hectares,
         location: body.location,
         zone: body.zone,
+        latitude: body.latitude,
+        longitude: body.longitude,
         score: nextStats?.score,
         scoreTrend: nextStats?.scoreTrend,
         monthlyRevenueChange: nextStats?.monthlyRevenueChange,

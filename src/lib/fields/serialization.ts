@@ -37,6 +37,8 @@ export type FieldRecord = {
   id: string;
   name: string;
   location: string;
+  latitude: number | null;
+  longitude: number | null;
   hectares: number;
   score: number;
   scoreTrend: number;
@@ -166,6 +168,8 @@ export function serializeField(field: FieldRecord): FieldProfile {
     id: field.id,
     name: field.name,
     location: field.location,
+    latitude: field.latitude,
+    longitude: field.longitude,
     hectares: field.hectares,
     score: field.score,
     scoreTrend: field.scoreTrend,

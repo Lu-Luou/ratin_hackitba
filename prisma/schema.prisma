@@ -35,6 +35,8 @@ model Field {
   id                   String   @id @default(cuid())
   name                 String   @db.Text
   location             String   @default("Sin definir") @db.Text
+  latitude             Float?   @db.DoublePrecision
+  longitude            Float?   @db.DoublePrecision
   hectares             Int
   score                Int      @default(50)
   scoreTrend           Int      @default(0) @map("score_trend")

@@ -5,7 +5,14 @@ import type { FieldProfile } from "@/types/field";
 
 interface FieldsContextType {
   fields: FieldProfile[];
-  addField: (name: string, hectares: number) => Promise<void>;
+  addField: (payload: {
+    name: string;
+    hectares: number;
+    location?: string;
+    zone?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }) => Promise<void>;
   updateField: (
     fieldId: string,
     payload: {
@@ -13,6 +20,8 @@ interface FieldsContextType {
       hectares?: number;
       location?: string;
       zone?: string;
+      latitude?: number | null;
+      longitude?: number | null;
     },
   ) => Promise<void>;
   deleteField: (fieldId: string) => Promise<void>;
@@ -70,7 +79,14 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
     void refreshFields();
   }, [refreshFields]);
 
-  const addField = useCallback(async (name: string, hectares: number) => {
+  const addField = useCallback(async (payload: {
+    name: string;
+    hectares: number;
+    location?: string;
+    zone?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }) => {
     try {
       const response = await fetch("/api/fields", {
         method: "POST",
@@ -78,10 +94,7 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          hectares,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const payload = await response.json().catch(() => ({}));
@@ -113,6 +126,8 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         hectares?: number;
         location?: string;
         zone?: string;
+        latitude?: number | null;
+        longitude?: number | null;
       },
     ) => {
       try {
