@@ -8,44 +8,45 @@ datasource db {
 }
 
 model AppUser {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  role      Role     @default(USER)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  name      String?
-  farmName  String?  @map("farm_name")
-  fields    Field[]
+  id            String         @id @db.Uuid
+  email         String         @unique
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  name          String?
+  farmName      String?        @map("farm_name")
+  fields        Field[]
   weatherAlerts WeatherAlert[]
+  todos         Todo[]
 
   @@map("app_users")
 }
 
 model Field {
-  id                   String   @id @default(cuid())
-  name                 String   @db.Text
-  location             String   @default("Sin definir") @db.Text
-  latitude             Float?   @db.DoublePrecision
-  longitude            Float?   @db.DoublePrecision
-  bboxMinLon           Float?   @map("bbox_min_lon") @db.DoublePrecision
-  bboxMinLat           Float?   @map("bbox_min_lat") @db.DoublePrecision
-  bboxMaxLon           Float?   @map("bbox_max_lon") @db.DoublePrecision
-  bboxMaxLat           Float?   @map("bbox_max_lat") @db.DoublePrecision
+  id                   String               @id @default(cuid())
+  name                 String               @db.Text
+  location             String               @default("Sin definir") @db.Text
+  latitude             Float?               @db.DoublePrecision
+  longitude            Float?               @db.DoublePrecision
+  bboxMinLon           Float?               @map("bbox_min_lon") @db.DoublePrecision
+  bboxMinLat           Float?               @map("bbox_min_lat") @db.DoublePrecision
+  bboxMaxLon           Float?               @map("bbox_max_lon") @db.DoublePrecision
+  bboxMaxLat           Float?               @map("bbox_max_lat") @db.DoublePrecision
   hectares             Int
-  defaultCostPerHaUsd  Float    @default(0) @map("default_cost_per_ha_usd") @db.DoublePrecision
-  score                Int      @default(50)
-  scoreTrend           Int      @default(0) @map("score_trend")
-  monthlyRevenueChange Float    @default(0) @map("monthly_revenue_change")
-  revenueHistory       Json     @map("revenue_history")
-  yieldHistory         Json     @map("yield_history")
+  defaultCostPerHaUsd  Float                @default(0) @map("default_cost_per_ha_usd") @db.DoublePrecision
+  score                Int                  @default(50)
+  scoreTrend           Int                  @default(0) @map("score_trend")
+  monthlyRevenueChange Float                @default(0) @map("monthly_revenue_change")
+  revenueHistory       Json                 @map("revenue_history")
+  yieldHistory         Json                 @map("yield_history")
   repayment            Json
   risk                 Json
-  zone                 String   @default("Sin definir")
-  userId               String   @map("user_id") @db.Uuid
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  zone                 String               @default("Sin definir")
+  userId               String               @map("user_id") @db.Uuid
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
   predictionSnapshots  PredictionSnapshot[]
-  user                 AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 AppUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
   alertLinks           AlertField[]
 
   @@index([userId])
@@ -54,41 +55,42 @@ model Field {
 }
 
 model PredictionSnapshot {
-  id                    String   @id @default(cuid())
-  fieldId               String   @map("field_id")
-  startDate             String   @map("start_date") @db.Text
-  endDate               String   @map("end_date") @db.Text
-  predictedYieldTonHa   Float    @map("predicted_yield_ton_ha") @db.DoublePrecision
-  spotPriceUsdPerTon    Float    @map("spot_price_usd_per_ton") @db.DoublePrecision
-  futuresContracts      Json     @map("futures_contracts")
-  costPerHaUsd          Float    @map("cost_per_ha_usd") @db.DoublePrecision
-  grossSpotUsd          Float    @map("gross_spot_usd") @db.DoublePrecision
-  netSpotUsd            Float    @map("net_spot_usd") @db.DoublePrecision
-  grossFuturesUsd       Json     @map("gross_futures_usd")
-  netFuturesUsd         Json     @map("net_futures_usd")
-  warning               String?  @db.Text
-  source                String   @default("yahoo") @db.Text
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                  String   @id @default(cuid())
+  fieldId             String   @map("field_id")
+  startDate           String   @map("start_date") @db.Text
+  endDate             String   @map("end_date") @db.Text
+  predictedYieldTonHa Float    @map("predicted_yield_ton_ha") @db.DoublePrecision
+  spotPriceUsdPerTon  Float    @map("spot_price_usd_per_ton") @db.DoublePrecision
+  futuresContracts    Json     @map("futures_contracts")
+  costPerHaUsd        Float    @map("cost_per_ha_usd") @db.DoublePrecision
+  grossSpotUsd        Float    @map("gross_spot_usd") @db.DoublePrecision
+  netSpotUsd          Float    @map("net_spot_usd") @db.DoublePrecision
+  grossFuturesUsd     Json     @map("gross_futures_usd")
+  netFuturesUsd       Json     @map("net_futures_usd")
+  warning             String?  @db.Text
+  source              String   @default("yahoo") @db.Text
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
 
   @@index([fieldId, createdAt])
   @@map("prediction_snapshots")
 }
+
 model WeatherAlert {
-  id                 String      @id @default(cuid())
-  userId             String      @map("user_id") @db.Uuid
-  relevanceScore     Int         @default(0) @map("relevance_score")
-  priorityScore      Int         @default(0) @map("priority_score")
-  location           String      @db.Text
-  latitude           Float?      @db.DoublePrecision
-  longitude          Float?      @db.DoublePrecision
-  description        String      @db.Text
-  extractedVariables Json        @map("extracted_variables")
-  issuedAt           DateTime    @default(now()) @map("issued_at") @db.Timestamptz(6)
-  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               AppUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String       @id @default(cuid())
+  userId             String       @map("user_id") @db.Uuid
+  relevanceScore     Int          @default(0) @map("relevance_score")
+  priorityScore      Int          @default(0) @map("priority_score")
+  location           String       @db.Text
+  latitude           Float?       @db.DoublePrecision
+  longitude          Float?       @db.DoublePrecision
+  description        String       @db.Text
+  extractedVariables Json         @map("extracted_variables")
+  issuedAt           DateTime     @default(now()) @map("issued_at") @db.Timestamptz(6)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               AppUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
   affectedFields     AlertField[]
 
   @@index([userId])
