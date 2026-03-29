@@ -1,125 +1,145 @@
 import Link from "next/link";
 
-const keyMetrics = [
+const tensionStats = [
   {
     value: "70%",
-    label: "de la soja en campos alquilados",
-    detail: "Muchos productores quedan fuera del credito tradicional por no tener escritura como garantia.",
+    label: "de la soja vive en campos alquilados",
+    detail: "Sin escritura como garantia, miles de productores quedan fuera del credito formal.",
   },
   {
     value: "2-5 USD",
     label: "por hectarea en peritaje presencial",
-    detail: "El costo de auditar en terreno escala demasiado rapido en operaciones grandes.",
+    detail: "El analisis fisico escala mal y frena la velocidad comercial de bancos y aseguradoras.",
   },
   {
     value: "10B USD",
-    label: "mercado subatendido estimado",
-    detail: "Capital que no se coloca por falta de evaluacion de riesgo granular y continua.",
+    label: "mercado subatendido en LatAm",
+    detail: "Capital disponible que hoy no se coloca por falta de evaluacion de riesgo por lote.",
   },
 ];
 
-const workflow = [
+const storyActs = [
+  {
+    chapter: "Acto 1",
+    title: "El problema",
+    description: "La banca agro decide con poca granularidad y mucho costo operativo.",
+  },
+  {
+    chapter: "Acto 2",
+    title: "La evidencia",
+    description: "Cada lote deja huellas objetivas en clima, satelite y productividad historica.",
+  },
+  {
+    chapter: "Acto 3",
+    title: "La decision",
+    description: "Convertimos esas senales en score, razones y alertas para decidir mejor y mas rapido.",
+  },
+];
+
+const engineSteps = [
   {
     step: "01",
-    title: "Ingesta satelital y meteorologica",
-    description:
-      "Procesamos datos de misiones satelitales y variables climaticas para estimar el estado productivo real de cada lote.",
+    title: "Lectura continua del lote",
+    description: "Integramos observacion satelital, clima y contexto productivo en una sola capa operativa.",
   },
   {
     step: "02",
-    title: "Motor de rendimiento y riesgo",
-    description:
-      "Nuestro modelo proyecta rendimiento actual/futuro y lo combina con senales de mercado, clima y estructura financiera.",
+    title: "Prediccion + scoring explicable",
+    description: "Estimamos rendimiento y riesgo con variables trazables, no con una caja negra opaca.",
   },
   {
     step: "03",
-    title: "Decision financiera accionable",
-    description:
-      "Entregamos scoring explicable, razones de decision y monitoreo continuo para bancos y aseguradoras.",
+    title: "Alerta y accion",
+    description: "El dashboard prioriza casos, explica impacto y sugiere proximos pasos para underwriting.",
   },
 ];
 
-const buyerValue = [
-  "Reduce costos de peritaje al priorizar visitas solo donde el riesgo lo justifica.",
-  "Mejora la precision del underwriting al pasar de analisis regional a analisis por lote.",
-  "Acelera aprobaciones y habilita credito para productores sin activos tradicionales.",
+const judgeTakeaways = [
+  "Pasamos de riesgo por region a riesgo por lote, con trazabilidad de variables.",
+  "Reducimos costo operativo de peritaje al visitar solo donde la alerta lo amerita.",
+  "Aceleramos decision crediticia en productores sin garantia tradicional.",
+  "Creamos monitoreo vivo, no una foto estatica de onboarding.",
 ];
 
 export default function HomePresentationPage() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_15%_10%,#d9f99d_0%,transparent_38%),radial-gradient(circle_at_85%_20%,#a7f3d0_0%,transparent_32%),linear-gradient(160deg,#f0fdf4_0%,#fefce8_45%,#fffbeb_100%)] px-6 py-10 text-zinc-900 sm:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_12%_8%,#fde68a_0%,transparent_34%),radial-gradient(circle_at_88%_14%,#86efac_0%,transparent_30%),linear-gradient(170deg,#f7fee7_0%,#fef9c3_38%,#ffedd5_100%)] px-6 py-10 text-zinc-900 sm:px-10 sm:py-12">
       <section className="mx-auto w-full max-w-6xl space-y-8">
-        <div className="overflow-hidden rounded-3xl border border-emerald-200/70 bg-white/85 shadow-[0_24px_80px_-28px_rgba(15,23,42,0.45)] backdrop-blur">
+        <div className="overflow-hidden rounded-3xl border border-zinc-900/10 bg-white/85 shadow-[0_28px_90px_-34px_rgba(15,23,42,0.55)] backdrop-blur">
           <div className="grid gap-8 p-8 sm:p-12 lg:grid-cols-[1.35fr_1fr] lg:gap-12">
             <div>
-              <p className="inline-flex rounded-full border border-emerald-300 bg-emerald-100/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-900">
-                Agri Fintech Intelligence
+              <p className="inline-flex rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-900">
+                Pitch Mode | SoyGuardian
               </p>
-              <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight text-emerald-950 sm:text-5xl">
-                SoyGuardian transforma riesgo agronomico en decisiones de credito claras.
+              <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight text-zinc-900 sm:text-5xl lg:text-6xl">
+                De incertidumbre rural a decisiones de credito defendibles.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-700 sm:text-lg">
-                Ayudamos a bancos y aseguradoras a evaluar cada lote de soja con evidencia satelital, climatica y financiera.
-                Pasamos de peritajes caros y lentos a una evaluacion continua, explicable y escalable.
+                SoyGuardian cuenta una historia simple: donde antes habia intuicion, ahora hay evidencia por lote. Combinamos
+                satelite, clima y finanzas para que bancos y aseguradoras aprueben mas rapido, con menor riesgo.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
-                  href="/login"
-                  className="rounded-xl border border-emerald-700 bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                >
-                  Iniciar sesion
-                </Link>
-                <Link
-                  href="/signup"
-                  className="rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50"
-                >
-                  Crear cuenta
-                </Link>
-                <Link
                   href="/dashboard"
-                  className="rounded-xl border border-zinc-300 bg-zinc-50 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                  className="rounded-xl border border-zinc-900 bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-zinc-800"
                 >
-                  Ver dashboard
+                  Ver demo en vivo
+                </Link>
+                <Link
+                  href="/assistant"
+                  className="rounded-xl border border-emerald-300 bg-emerald-100 px-5 py-3 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5 hover:bg-emerald-200"
+                >
+                  Simular decision asistida
+                </Link>
+                <Link
+                  href="/login"
+                  className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:-translate-y-0.5 hover:border-zinc-400"
+                >
+                  Ingresar
                 </Link>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-900 p-6 text-zinc-50">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Resumen ejecutivo</p>
-              <h2 className="mt-3 text-2xl font-black leading-tight text-white">Por que existe SoyGuardian</h2>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-                La banca agro necesita evaluar mejor sin depender solo de garantias tradicionales. Nuestro modelo permite estimar
-                rendimiento y riesgo de inversion por lote, incluso en campos alquilados.
-              </p>
-              <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                <p className="text-sm font-semibold text-emerald-200">Resultado esperado</p>
-                <p className="mt-1 text-sm text-emerald-100">
-                  Menor incertidumbre de colocacion, mayor velocidad de decision y expansion de cartera con trazabilidad.
-                </p>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-950 p-6 text-zinc-50">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">La historia en 3 actos</p>
+              <div className="mt-4 space-y-3">
+                {storyActs.map((act) => (
+                  <article key={act.chapter} className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300">{act.chapter}</p>
+                    <h2 className="mt-1 text-base font-black text-white">{act.title}</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-300">{act.description}</p>
+                  </article>
+                ))}
               </div>
+              <p className="mt-4 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs leading-relaxed text-emerald-100">
+                Objetivo para el jurado: validar que nuestra arquitectura convierte datos complejos en decisiones ejecutables.
+              </p>
             </div>
           </div>
         </div>
 
         <section className="grid gap-4 sm:grid-cols-3">
-          {keyMetrics.map((metric) => (
-            <article key={metric.label} className="rounded-2xl border border-emerald-200/70 bg-white/90 p-5 shadow-sm">
-              <p className="text-3xl font-black text-emerald-900">{metric.value}</p>
+          {tensionStats.map((metric) => (
+            <article
+              key={metric.label}
+              className="rounded-2xl border border-amber-300/55 bg-white/90 p-5 shadow-[0_12px_30px_-22px_rgba(113,63,18,0.55)] transition hover:-translate-y-1"
+            >
+              <p className="text-3xl font-black text-amber-700">{metric.value}</p>
               <p className="mt-1 text-sm font-semibold text-zinc-900">{metric.label}</p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-600">{metric.detail}</p>
             </article>
           ))}
         </section>
 
-        <section className="grid gap-8 rounded-3xl border border-amber-200/70 bg-white/85 p-8 lg:grid-cols-[1.2fr_1fr]">
+        <section className="grid gap-8 rounded-3xl border border-emerald-300/60 bg-white/85 p-8 lg:grid-cols-[1.25fr_1fr]">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Como funciona</p>
-            <h2 className="mt-3 text-3xl font-black leading-tight text-zinc-900">Del dato satelital a la decision financiera</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Nuestro motor</p>
+            <h2 className="mt-3 text-3xl font-black leading-tight text-zinc-900">Como transformamos senales en underwriting</h2>
             <div className="mt-6 space-y-4">
-              {workflow.map((item) => (
+              {engineSteps.map((item) => (
                 <article key={item.step} className="rounded-xl border border-zinc-200 bg-white p-4">
-                  <p className="text-xs font-bold tracking-[0.2em] text-emerald-700">STEP {item.step}</p>
+                  <p className="text-xs font-black tracking-[0.2em] text-emerald-700">STEP {item.step}</p>
                   <h3 className="mt-1 text-lg font-bold text-zinc-900">{item.title}</h3>
                   <p className="mt-1 text-sm leading-relaxed text-zinc-600">{item.description}</p>
                 </article>
@@ -128,18 +148,50 @@ export default function HomePresentationPage() {
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6">
-            <h3 className="text-xl font-black text-zinc-900">Impacto para bancos y aseguradoras</h3>
+            <h3 className="text-xl font-black text-zinc-900">Que deberia ver el jurado</h3>
             <ul className="mt-4 space-y-3">
-              {buyerValue.map((item) => (
+              {judgeTakeaways.map((item) => (
                 <li key={item} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
                   {item}
                 </li>
               ))}
             </ul>
-            <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-              En el prototipo actual, el modelo de prediccion logra aproximadamente 72% de precision y se integra con scoring
-              explicable para decision de riesgo.
-            </p>
+
+            <div className="mt-5 rounded-xl border border-zinc-900 bg-zinc-900 px-4 py-3 text-zinc-100">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">Proof point</p>
+              <p className="mt-1 text-sm leading-relaxed">
+                El prototipo actual alcanza aproximadamente 72% de precision en prediccion de rendimiento y alimenta un score
+                interpretable para riesgo crediticio.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-900/15 bg-white/85 p-8 shadow-[0_20px_60px_-35px_rgba(15,23,42,0.55)]">
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Cierre para presentacion</p>
+              <h2 className="mt-2 text-3xl font-black leading-tight text-zinc-900">Menos friccion para prestar. Mas confianza para crecer cartera.</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
+                Este producto no reemplaza al analista: lo vuelve mas potente. SoyGuardian sirve como capa de inteligencia para
+                priorizar, justificar y monitorear decisiones de credito agro en tiempo real.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 lg:justify-end">
+              <Link
+                href="/dashboard"
+                className="rounded-xl border border-emerald-700 bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              >
+                Abrir dashboard
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400"
+              >
+                Crear cuenta
+              </Link>
+            </div>
           </div>
         </section>
       </section>
