@@ -37,9 +37,14 @@ export async function GET() {
           take: 1,
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [
+        {
+          sortOrder: "asc",
+        },
+        {
+          createdAt: "desc",
+        },
+      ],
       take: 200,
     });
 
@@ -56,6 +61,18 @@ export async function POST(request: Request) {
     const { appUser } = await requireSessionContext();
     const body = createFieldSchema.parse(await request.json());
     const stats = buildFieldStats(body.name, body.hectares);
+    const lastField = await prisma.field.findFirst({
+      where: {
+        userId: appUser.id,
+      },
+      orderBy: {
+        sortOrder: "desc",
+      },
+      select: {
+        sortOrder: true,
+      },
+    });
+    const nextSortOrder = (lastField?.sortOrder ?? -1) + 1;
 
     const field = await prisma.field.create({
       data: {
@@ -78,6 +95,7 @@ export async function POST(request: Request) {
         yieldHistory: stats.yieldHistory as Prisma.InputJsonValue,
         repayment: stats.repayment as Prisma.InputJsonValue,
         risk: stats.risk as Prisma.InputJsonValue,
+        sortOrder: nextSortOrder,
       },
       include: {
         predictionSnapshots: {

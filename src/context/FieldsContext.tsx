@@ -35,6 +35,7 @@ interface FieldsContextType {
     },
   ) => Promise<void>;
   deleteField: (fieldId: string) => Promise<void>;
+  reorderFields: (orderedFieldIds: string[]) => Promise<void>;
   refreshFields: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -43,6 +44,16 @@ interface FieldsContextType {
 }
 
 const FieldsContext = createContext<FieldsContextType | null>(null);
+
+function sortFieldsByOrder(list: FieldProfile[]) {
+  return [...list].sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) {
+      return a.sortOrder - b.sortOrder;
+    }
+
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+}
 
 export function FieldsProvider({ children }: { children: ReactNode }) {
   const [fields, setFields] = useState<FieldProfile[]>([]);
@@ -66,15 +77,16 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
       }
 
       const data = Array.isArray(payload?.data) ? (payload.data as FieldProfile[]) : [];
+      const sortedData = sortFieldsByOrder(data);
 
-      setFields(data);
+      setFields(sortedData);
       setError(null);
       setSelectedField((prev) => {
         if (!prev) {
           return null;
         }
 
-        return data.find((field) => field.id === prev.id) ?? null;
+        return sortedData.find((field) => field.id === prev.id) ?? null;
       });
     } catch (loadError) {
       setFields([]);
@@ -124,7 +136,7 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         throw new Error("No se recibio el nuevo campo desde el servidor.");
       }
 
-      setFields((prev) => [createdField, ...prev]);
+      setFields((prev) => sortFieldsByOrder([...prev, createdField]));
       setError(null);
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : "No se pudo crear el campo.";
@@ -172,7 +184,7 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
           throw new Error("No se recibio el campo actualizado desde el servidor.");
         }
 
-        setFields((prev) => prev.map((field) => (field.id === updatedField.id ? updatedField : field)));
+        setFields((prev) => sortFieldsByOrder(prev.map((field) => (field.id === updatedField.id ? updatedField : field))));
         setSelectedField((prev) => (prev?.id === updatedField.id ? updatedField : prev));
         setError(null);
       } catch (updateError) {
@@ -207,6 +219,55 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const reorderFields = useCallback(
+    async (orderedFieldIds: string[]) => {
+      const previousFields = fields;
+      const positionById = new Map(orderedFieldIds.map((fieldId, index) => [fieldId, index]));
+      const reorderedFields = sortFieldsByOrder(
+        fields.map((field) => {
+          const nextOrder = positionById.get(field.id);
+
+          return {
+            ...field,
+            sortOrder: nextOrder ?? field.sortOrder,
+          };
+        }),
+      );
+
+      setFields(reorderedFields);
+      setSelectedField((prev) => (prev ? reorderedFields.find((field) => field.id === prev.id) ?? null : null));
+
+      try {
+        const response = await fetch("/api/fields/reorder", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderedFieldIds,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(payload?.error ?? "No se pudo guardar el orden de los campos.");
+        }
+
+        setError(null);
+      } catch (reorderError) {
+        setFields(previousFields);
+        setSelectedField((prev) => (prev ? previousFields.find((field) => field.id === prev.id) ?? null : null));
+
+        const message = reorderError instanceof Error ? reorderError.message : "No se pudo guardar el orden de los campos.";
+        setError(message);
+        throw reorderError;
+      }
+    },
+    [fields],
+  );
+
   return (
     <FieldsContext.Provider
       value={{
@@ -214,6 +275,7 @@ export function FieldsProvider({ children }: { children: ReactNode }) {
         addField,
         updateField,
         deleteField,
+        reorderFields,
         refreshFields,
         isLoading,
         error,

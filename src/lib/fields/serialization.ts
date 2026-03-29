@@ -93,6 +93,7 @@ export type FieldRecord = {
   repayment: unknown;
   risk: unknown;
   zone: string;
+  sortOrder: number;
   createdAt: Date;
   predictionSnapshots?: Array<{
     id: string;
@@ -318,6 +319,7 @@ export function serializeField(field: FieldRecord): FieldProfile {
     repayment: parseWithFallback(repaymentSchema, field.repayment, defaults.repayment),
     risk: parseWithFallback(riskSchema, field.risk, defaults.risk),
     zone: field.zone,
+    sortOrder: field.sortOrder,
     createdAt: field.createdAt.toISOString().slice(0, 10),
     latestPrediction: buildLatestPredictionSummary(field),
   };

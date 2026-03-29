@@ -78,6 +78,7 @@ export interface FieldProfile {
   repayment: FieldRepayment;
   risk: FieldRisk;
   zone: string;
+  sortOrder: number;
   createdAt: string;
   latestPrediction: FieldPredictionSummary | null;
 }

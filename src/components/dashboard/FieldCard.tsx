@@ -21,17 +21,22 @@ export function FieldCard({
   field,
   onClick,
   activeAlertCount = 0,
+  isDragging = false,
 }: {
   field: FieldProfile;
   onClick: () => void;
   activeAlertCount?: number;
+  isDragging?: boolean;
 }) {
   const positive = field.monthlyRevenueChange >= 0;
   const { data: weather, loading: weatherLoading, error: weatherError } = useFieldWeather(field.id);
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow border-border/60 group"
+      className={cn(
+        "cursor-pointer hover:shadow-md transition-shadow border-border/60 group",
+        isDragging ? "ring-2 ring-primary/30 shadow-md" : null,
+      )}
       onClick={onClick}
     >
       <CardContent className="p-5 space-y-4">
@@ -65,15 +70,23 @@ export function FieldCard({
           <span className="text-xs text-muted-foreground">rev. mensual</span>
         </div>
 
-        {field.latestPrediction ? (
-          <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
-            <p className="text-muted-foreground">Yield estimado</p>
-            <p className="font-semibold text-foreground">{field.latestPrediction.predictedYieldTonHa.toFixed(2)} ton/ha</p>
-            <p className={cn("font-semibold", field.latestPrediction.netSpotUsd >= 0 ? "text-success" : "text-destructive")}>
-              Neto spot: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(field.latestPrediction.netSpotUsd)}
-            </p>
-          </div>
-        ) : null}
+        <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs min-h-20">
+          {field.latestPrediction ? (
+            <>
+              <p className="text-muted-foreground">Yield estimado</p>
+              <p className="font-semibold text-foreground">{field.latestPrediction.predictedYieldTonHa.toFixed(2)} ton/ha</p>
+              <p className={cn("font-semibold", field.latestPrediction.netSpotUsd >= 0 ? "text-success" : "text-destructive")}>
+                Neto spot: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(field.latestPrediction.netSpotUsd)}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground">Yield estimado</p>
+              <p className="font-semibold text-muted-foreground">Pendiente de calculo</p>
+              <p className="font-semibold text-muted-foreground">Neto spot: --</p>
+            </>
+          )}
+        </div>
 
         <WeatherIndicator weather={weather ?? null} loading={weatherLoading} error={weatherError} compact={true} />
       </CardContent>

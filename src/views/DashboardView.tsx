@@ -1,4 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { FieldCard } from "@/components/dashboard/FieldCard";
 import { AddFieldDialog } from "@/components/dashboard/AddFieldDialog";
 import { FieldDetail } from "@/components/field/FieldDetail";
@@ -7,12 +18,53 @@ import { Input } from "@/components/ui/input";
 import { useFields } from "@/context/FieldsContext";
 import { Search, ShieldCheck } from "lucide-react";
 import type { AlertsApiResponse, WeatherAlertItem } from "@/types/alert";
+import type { FieldProfile } from "@/types/field";
 import { computeFieldAlertRiskAdjustment } from "@/lib/alerts/risk-impact";
+import { cn } from "@/lib/utils";
+
+function SortableFieldCard({
+  field,
+  activeAlertCount,
+  onClick,
+  disabled,
+}: {
+  field: FieldProfile;
+  activeAlertCount: number;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: field.id,
+    disabled,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("touch-none", isDragging ? "z-20" : null)}
+      {...attributes}
+      {...listeners}
+    >
+      <FieldCard
+        field={field}
+        activeAlertCount={activeAlertCount}
+        onClick={onClick}
+        isDragging={isDragging}
+      />
+    </div>
+  );
+}
 
 export default function DashboardView({ filter }: { filter?: string }) {
-  const { fields, isLoading, error, refreshFields, selectedField, setSelectedField } = useFields();
+  const { fields, isLoading, error, refreshFields, reorderFields, selectedField, setSelectedField } = useFields();
   const [search, setSearch] = useState("");
   const [activeAlerts, setActiveAlerts] = useState<WeatherAlertItem[]>([]);
+  const [isPersistingOrder, setIsPersistingOrder] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,9 +139,63 @@ export default function DashboardView({ filter }: { filter?: string }) {
   }, [fields, search, filter]);
 
   const isRiskFilter = filter === "risk";
+  const reorderEnabled = !filter && search.trim().length === 0;
+  const canDragReorder = reorderEnabled && filtered.length > 1;
   const hasAnyFields = fields.length > 0;
   const showHealthyRiskState = isRiskFilter && hasAnyFields && filtered.length === 0 && search.trim().length === 0;
   const showAddFieldDialog = !(showHealthyRiskState);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 8,
+      },
+    }),
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      if (!canDragReorder || isPersistingOrder) {
+        return;
+      }
+
+      const { active, over } = event;
+
+      if (!over) {
+        return;
+      }
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      if (activeId === overId) {
+        return;
+      }
+
+      const oldIndex = filtered.findIndex((field) => field.id === activeId);
+      const newIndex = filtered.findIndex((field) => field.id === overId);
+
+      if (oldIndex < 0 || newIndex < 0) {
+        return;
+      }
+
+      const reordered = arrayMove(filtered, oldIndex, newIndex);
+
+      setIsPersistingOrder(true);
+
+      try {
+        await reorderFields(reordered.map((field) => field.id));
+      } finally {
+        setIsPersistingOrder(false);
+      }
+    },
+    [canDragReorder, filtered, isPersistingOrder, reorderFields],
+  );
 
   if (selectedField) {
     return <FieldDetail field={selectedField} onBack={() => setSelectedField(null)} />;
@@ -128,15 +234,45 @@ export default function DashboardView({ filter }: { filter?: string }) {
         />
       </div>
 
+      {hasAnyFields ? (
+        <p className="text-xs text-muted-foreground">
+          {reorderEnabled
+            ? "Arrastra cualquier tarjeta para guardar tu orden personalizado."
+            : "Para reordenar campos, limpia la busqueda y los filtros activos."}
+        </p>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((field) => (
-          <FieldCard
-            key={field.id}
-            field={field}
-            activeAlertCount={alertCountByFieldId[field.id] ?? 0}
-            onClick={() => setSelectedField(field)}
-          />
-        ))}
+        {canDragReorder ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => {
+              void handleDragEnd(event);
+            }}
+          >
+            <SortableContext items={filtered.map((field) => field.id)} strategy={rectSortingStrategy}>
+              {filtered.map((field) => (
+                <SortableFieldCard
+                  key={field.id}
+                  field={field}
+                  activeAlertCount={alertCountByFieldId[field.id] ?? 0}
+                  onClick={() => setSelectedField(field)}
+                  disabled={isPersistingOrder}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          filtered.map((field) => (
+            <FieldCard
+              key={field.id}
+              field={field}
+              activeAlertCount={alertCountByFieldId[field.id] ?? 0}
+              onClick={() => setSelectedField(field)}
+            />
+          ))
+        )}
         {showAddFieldDialog ? <AddFieldDialog /> : null}
       </div>
 
