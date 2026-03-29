@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle, FileText, Download, Loader2, CheckCircle2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, MessageCircle, FileText, Download, Loader2, CheckCircle2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useEffect, useMemo, useState } from "react";
@@ -125,7 +125,7 @@ function normalizeReportData(raw: unknown): LenderReportData | null {
 
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
   const { updateField, deleteField, refreshFields } = useFields();
-  const { data: weatherData } = useFieldWeather(field.id);
+  const { data: weatherData, loading: weatherLoading, error: weatherError } = useFieldWeather(field.id);
   const [activeAlerts, setActiveAlerts] = useState<WeatherAlertItem[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -228,12 +228,22 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
     [matchedAlerts],
   );
   const topPhenomenon = matchedAlertsOrdered[0]?.description ?? null;
+  const weatherMetrics = weatherData?.metrics ?? null;
+
   function formatUsd(value: number) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       maximumFractionDigits: 0,
     }).format(value);
+  }
+
+  function formatWeatherValue(value: number | null, decimals = 1) {
+    if (value === null || Number.isNaN(value)) {
+      return "N/A";
+    }
+
+    return value.toFixed(decimals);
   }
 
   function parseCostOverride() {
@@ -836,26 +846,74 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
 
         {/* Top cards */}
         <div className="grid grid-cols-3 gap-4">
-          {/* Score */}
+          {/* Weather */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Health Score</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-end gap-2">
-                <span className={cn("text-4xl font-display font-bold",
-                  field.score >= 80 ? "text-success" : field.score >= 60 ? "text-warning" : "text-destructive"
-                )}>
-                  {field.score}
-                </span>
-                <span className="text-muted-foreground text-sm mb-1">/100</span>
-                <div className="ml-auto flex items-center gap-1">
-                  {field.scoreTrend >= 0 ? <TrendingUp className="h-4 w-4 text-success" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
-                  <span className={cn("text-sm font-medium", field.scoreTrend >= 0 ? "text-success" : "text-destructive")}>
-                    {field.scoreTrend >= 0 ? "+" : ""}{field.scoreTrend}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Clima del lote</CardTitle>
+                {weatherMetrics ? (
+                  <Badge
+                    variant={weatherMetrics.riskScore > 70 ? "outline" : "secondary"}
+                    className={cn(
+                      weatherMetrics.riskScore > 70
+                        ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                        : undefined,
+                    )}
+                  >
+                    Riesgo {Math.round(weatherMetrics.riskScore)}
+                  </Badge>
+                ) : null}
               </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {weatherLoading ? (
+                <p className="text-sm text-muted-foreground">Cargando datos climaticos...</p>
+              ) : weatherError ? (
+                <p className="text-sm text-destructive">{weatherError}</p>
+              ) : !weatherMetrics ? (
+                <p className="text-sm text-muted-foreground">Sin datos climaticos para este campo.</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Temp prom</p>
+                      <p className="font-semibold">{formatWeatherValue(weatherMetrics.avgTemperatureCelsius)} C</p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Rango temp</p>
+                      <p className="font-semibold">
+                        {formatWeatherValue(weatherMetrics.minTemperatureCelsius)} - {formatWeatherValue(weatherMetrics.maxTemperatureCelsius)} C
+                      </p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Lluvia total</p>
+                      <p className="font-semibold">{formatWeatherValue(weatherMetrics.totalPrecipitationMm)} mm</p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Deficit lluvia</p>
+                      <p className="font-semibold">{formatWeatherValue(weatherMetrics.precipitationDeficitMm)} mm</p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Viento prom</p>
+                      <p className="font-semibold">{formatWeatherValue(weatherMetrics.avgWindSpeedKmh)} km/h</p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Viento max</p>
+                      <p className="font-semibold">{formatWeatherValue(weatherMetrics.maxWindSpeedKmh)} km/h</p>
+                    </div>
+                    <div className="rounded border px-2 py-1.5">
+                      <p className="text-muted-foreground">Dias extremos</p>
+                      <p className="font-semibold">{weatherMetrics.extremeWeatherDayCount} dias</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <p>Ventana analizada: {weatherData.period}</p>
+                    <p>Actualizado: {new Date(weatherData.fetchedAt).toLocaleString("es-AR")}</p>
+                    {weatherData.warning ? <p className="text-warning">Aviso: {weatherData.warning}</p> : null}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
