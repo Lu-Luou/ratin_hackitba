@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FieldValue Hackitba",
+  title: "SoyGuardian Hackitba",
   description: "Starter con Next.js + TypeScript + Supabase listo para Vercel",
 };
 

@@ -585,7 +585,7 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
 
         {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
 
-        <Card className="border-border/70 bg-gradient-to-br from-background via-background to-muted/20 shadow-sm">
+        <Card className="border-border/70 bg-linear-to-br from-background via-background to-muted/20 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -870,7 +870,7 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
                 <p className="text-sm text-muted-foreground">Cargando datos climaticos...</p>
               ) : weatherError ? (
                 <p className="text-sm text-destructive">{weatherError}</p>
-              ) : !weatherMetrics ? (
+              ) : !weatherMetrics || !weatherData ? (
                 <p className="text-sm text-muted-foreground">Sin datos climaticos para este campo.</p>
               ) : (
                 <>
