@@ -25,7 +25,7 @@ function riskScoreColor(score: number): string {
 export function WeatherIndicator({ weather, loading, error, compact = false }: WeatherIndicatorProps) {
   if (loading) {
     return (
-      <div className={cn("rounded-md border bg-muted/10 px-3 py-2", compact ? "text-xs" : "text-sm")}>
+      <div className={cn("rounded-md border bg-muted/10 px-3 py-2", compact ? "min-h-32 text-xs" : "text-sm")}>
         <div className="text-muted-foreground animate-pulse">Cargando clima...</div>
       </div>
     );
@@ -33,7 +33,7 @@ export function WeatherIndicator({ weather, loading, error, compact = false }: W
 
   if (error || !weather) {
     return (
-      <div className={cn("rounded-md border border-muted-foreground/30 bg-muted/10 px-3 py-2", compact ? "text-xs" : "text-sm")}>
+      <div className={cn("rounded-md border border-muted-foreground/30 bg-muted/10 px-3 py-2", compact ? "min-h-32 text-xs" : "text-sm")}>
         <div className="text-muted-foreground">{error ?? "Sin datos climáticos"}</div>
       </div>
     );
@@ -42,7 +42,7 @@ export function WeatherIndicator({ weather, loading, error, compact = false }: W
   const { metrics } = weather;
 
   return (
-    <div className={cn("rounded-md border bg-muted/20 px-3 py-2 space-y-2", compact ? "text-xs" : "text-sm")}>
+    <div className={cn("rounded-md border bg-muted/20 px-3 py-2 space-y-2", compact ? "min-h-32 text-xs" : "text-sm")}>
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground">Clima (últimos 30 días)</span>
         <Tooltip>
@@ -99,7 +99,7 @@ export function WeatherIndicator({ weather, loading, error, compact = false }: W
         </div>
       </div>
 
-      {weather.warning && (
+      {!compact && weather.warning && (
         <div className="rounded bg-warning/20 border border-warning/30 p-1.5 text-xs text-warning-foreground">
           ⚠️ {weather.warning}
         </div>

@@ -5,18 +5,6 @@ import { cn } from "@/lib/utils";
 import { useFieldWeather } from "@/hooks/use-field-weather";
 import { WeatherIndicator } from "@/components/field/WeatherIndicator";
 
-function scoreColor(score: number) {
-  if (score >= 80) return "text-success";
-  if (score >= 60) return "text-warning";
-  return "text-destructive";
-}
-
-function scoreBg(score: number) {
-  if (score >= 80) return "bg-success/10";
-  if (score >= 60) return "bg-warning/10";
-  return "bg-destructive/10";
-}
-
 export function FieldCard({
   field,
   onClick,
@@ -34,27 +22,24 @@ export function FieldCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer hover:shadow-md transition-shadow border-border/60 group",
+        "h-full cursor-pointer hover:shadow-md transition-shadow border-border/60 group",
         isDragging ? "ring-2 ring-primary/30 shadow-md" : null,
       )}
       onClick={onClick}
     >
-      <CardContent className="p-5 space-y-4">
+      <CardContent className="h-full p-5 flex flex-col gap-4">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-display font-semibold text-foreground text-base">{field.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{field.hectares} ha · {field.zone}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="min-h-6 flex items-start">
             {activeAlertCount > 0 ? (
               <span className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
                 <TriangleAlert className="h-3 w-3" />
                 {activeAlertCount} alerta(s)
               </span>
             ) : null}
-            <div className={cn("rounded-full px-3 py-1 text-sm font-bold", scoreBg(field.score), scoreColor(field.score))}>
-              {field.score}
-            </div>
           </div>
         </div>
 

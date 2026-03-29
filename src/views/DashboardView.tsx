@@ -46,7 +46,7 @@ function SortableFieldCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("touch-none", isDragging ? "z-20" : null)}
+      className={cn("h-full touch-none", isDragging ? "z-20" : null)}
       {...attributes}
       {...listeners}
     >
@@ -123,10 +123,12 @@ export default function DashboardView({ filter }: { filter?: string }) {
         result = [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         break;
       case "top":
-        result = [...result].sort((a, b) => b.score - a.score);
+        result = [...result].sort((a, b) => b.monthlyRevenueChange - a.monthlyRevenueChange);
         break;
       case "risk":
-        result = result.filter((field) => field.score < 70);
+        result = result.filter(
+          (field) => field.risk.climate === "Alto" || field.risk.market === "Alto" || field.risk.logistics === "Alto",
+        );
         break;
       case "zone":
         result = [...result].sort((a, b) => a.zone.localeCompare(b.zone));
@@ -242,7 +244,7 @@ export default function DashboardView({ filter }: { filter?: string }) {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
         {canDragReorder ? (
           <DndContext
             sensors={sensors}
