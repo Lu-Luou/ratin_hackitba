@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle, TriangleAlert } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, MessageCircle, FileText, Download, Loader2, CheckCircle2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +13,26 @@ import { useFieldWeather } from "@/hooks/use-field-weather";
 import { CreditRiskPanel } from "./CreditRiskPanel";
 import type { AlertsApiResponse, WeatherAlertItem } from "@/types/alert";
 import { applyAlertRiskAdjustment, computeFieldAlertRiskAdjustment } from "@/lib/alerts/risk-impact";
+import { FieldSatelliteMap } from "./FieldSatelliteMap";
+
+type LenderReportData = {
+  provider: {
+    name: string;
+    model: string;
+    usedWebSearch: boolean;
+  };
+  executiveSummary: string;
+  riskFlags: string[];
+  recommendation: string;
+  narrative: string;
+  citations: Array<{
+    title: string;
+    url: string;
+  }>;
+  generatedAt: string;
+};
+
+type ReportGenerationPhase = "idle" | "collecting" | "searching" | "generating" | "ready" | "error";
 
 function riskBadgeVariant(level: string): "default" | "secondary" | "destructive" {
   if (level === "Bajo") return "secondary";
@@ -33,11 +53,22 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
   const [isPredicting, setIsPredicting] = useState(false);
   const [isSavingDefaultCost, setIsSavingDefaultCost] = useState(false);
   const [costOverrideUsd, setCostOverrideUsd] = useState(String(field.defaultCostPerHaUsd));
+  const [reportPhase, setReportPhase] = useState<ReportGenerationPhase>("idle");
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<LenderReportData | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   useEffect(() => {
     setPrediction(field.latestPrediction);
     setCostOverrideUsd(String(field.defaultCostPerHaUsd));
   }, [field.id, field.latestPrediction, field.defaultCostPerHaUsd]);
+
+  useEffect(() => {
+    setReportPhase("idle");
+    setReportError(null);
+    setReportData(null);
+    setIsDownloadingPdf(false);
+  }, [field.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +145,6 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
     [matchedAlerts],
   );
   const topPhenomenon = matchedAlertsOrdered[0]?.description ?? null;
-
   function formatUsd(value: number) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -131,6 +161,140 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
     }
 
     return parsed;
+  }
+
+  function reportPhaseLabel(phase: ReportGenerationPhase) {
+    if (phase === "collecting") return "Recolectando señales internas (geo, yield, NDVI, clima)...";
+    if (phase === "searching") return "Buscando contexto externo de mercado y clima...";
+    if (phase === "generating") return "Generando memo para underwriting bancario...";
+    if (phase === "ready") return "Reporte listo.";
+    if (phase === "error") return "No se pudo generar el reporte.";
+    return "Sin generación activa.";
+  }
+
+  function reportPhaseProgress(phase: ReportGenerationPhase) {
+    if (phase === "collecting") return 25;
+    if (phase === "searching") return 55;
+    if (phase === "generating") return 85;
+    if (phase === "ready") return 100;
+    if (phase === "error") return 100;
+    return 0;
+  }
+
+  async function generateLenderReport() {
+    if (reportPhase === "collecting" || reportPhase === "searching" || reportPhase === "generating") {
+      return;
+    }
+
+    setReportError(null);
+    setReportPhase("collecting");
+
+    try {
+      const contextResponse = await fetch(`/api/fields/${field.id}/report/context?includeLiveFeatures=true`, {
+        method: "GET",
+        credentials: "include",
+      });
+      const contextPayload = await contextResponse.json().catch(() => ({}));
+
+      if (!contextResponse.ok) {
+        throw new Error(contextPayload?.error ?? "No se pudo preparar el contexto del reporte.");
+      }
+
+      setReportPhase("searching");
+
+      const phaseSwitchTimeout = window.setTimeout(() => {
+        setReportPhase((current) => (current === "searching" ? "generating" : current));
+      }, 1100);
+
+      const response = await fetch(`/api/fields/${field.id}/report/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          includeWebSearch: true,
+          includeLiveFeatures: true,
+          format: "json",
+        }),
+      });
+
+      window.clearTimeout(phaseSwitchTimeout);
+      setReportPhase("generating");
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No se pudo generar el reporte LLM.");
+      }
+
+      const report = payload?.data?.report as LenderReportData | undefined;
+
+      if (!report || typeof report.executiveSummary !== "string") {
+        throw new Error("El backend devolvio un reporte invalido.");
+      }
+
+      setReportData(report);
+      setReportPhase("ready");
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "No se pudo generar el reporte.");
+      setReportPhase("error");
+    }
+  }
+
+  async function downloadLenderReportPdf() {
+    if (isDownloadingPdf) {
+      return;
+    }
+
+    setReportError(null);
+    setIsDownloadingPdf(true);
+
+    if (reportPhase === "idle" || reportPhase === "error") {
+      setReportPhase("collecting");
+    }
+
+    try {
+      setReportPhase("searching");
+
+      const response = await fetch(`/api/fields/${field.id}/report/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          includeWebSearch: true,
+          includeLiveFeatures: true,
+          format: "pdf",
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error ?? "No se pudo generar el PDF.");
+      }
+
+      setReportPhase("generating");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `field-report-${field.id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      if (reportPhase !== "ready") {
+        setReportPhase("ready");
+      }
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "No se pudo descargar el PDF.");
+      setReportPhase("error");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   }
 
   async function runPrediction() {
@@ -328,6 +492,113 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
 
         {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
 
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Reporte LLM para Banco</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Resume Geo, Yield, NDVI, bandas, clima y señales de riesgo para underwriting.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => void generateLenderReport()}
+                  disabled={reportPhase === "collecting" || reportPhase === "searching" || reportPhase === "generating"}
+                >
+                  {reportPhase === "collecting" || reportPhase === "searching" || reportPhase === "generating" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      Generar reporte
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void downloadLenderReportPdf()}
+                  disabled={isDownloadingPdf || reportPhase === "collecting" || reportPhase === "searching" || reportPhase === "generating"}
+                >
+                  {isDownloadingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Preparando PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Descargar PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                {reportPhase === "ready" ? (
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                ) : reportPhase === "collecting" || reportPhase === "searching" || reportPhase === "generating" ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : null}
+                <span className={cn(reportPhase === "error" ? "text-destructive" : "text-muted-foreground")}>{reportPhaseLabel(reportPhase)}</span>
+              </div>
+              <Progress value={reportPhaseProgress(reportPhase)} className="h-2" />
+            </div>
+
+            {reportData ? (
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline">Proveedor: {reportData.provider.name}</Badge>
+                  <Badge variant="outline">Modelo: {reportData.provider.model}</Badge>
+                  <Badge variant={reportData.provider.usedWebSearch ? "default" : "secondary"}>
+                    {reportData.provider.usedWebSearch ? "Con web search" : "Solo datos internos"}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Executive Summary</p>
+                  <p className="text-sm leading-relaxed">{reportData.executiveSummary}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Recomendación</p>
+                  <p className="text-sm leading-relaxed">{reportData.recommendation}</p>
+                </div>
+
+                {reportData.riskFlags.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Risk Flags</p>
+                    <ul className="mt-1 list-disc pl-5 text-sm">
+                      {reportData.riskFlags.map((flag, index) => (
+                        <li key={`${flag}-${index}`}>{flag}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <p className="text-xs text-muted-foreground">
+                  Generado: {new Date(reportData.generatedAt).toLocaleString("es-AR")} · Fuentes externas: {reportData.citations.length}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay reporte generado. Usa Generar reporte para crear un memo financiero y luego Descargar PDF para compartirlo.
+              </p>
+            )}
+
+            {reportError ? <p className="text-sm text-destructive">{reportError}</p> : null}
+          </CardContent>
+        </Card>
+
         {/* Prediction & valuation */}
         <Card>
           <CardHeader className="pb-2">
@@ -509,6 +780,25 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
         </div>
 
         <CreditRiskPanel field={effectiveField} weatherRiskScore={weatherData?.metrics.riskScore ?? null} />
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Imagen satelital del campo</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Vista interactiva con el area estimada del lote para validacion visual.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <FieldSatelliteMap
+              latitude={field.latitude}
+              longitude={field.longitude}
+              bboxMinLon={field.bboxMinLon}
+              bboxMinLat={field.bboxMinLat}
+              bboxMaxLon={field.bboxMaxLon}
+              bboxMaxLat={field.bboxMaxLat}
+            />
+          </CardContent>
+        </Card>
 
         {/* Chart */}
         <Card>

@@ -1,6 +1,7 @@
 import type { SoyFuturesContract } from "@/types/field";
 
 type PredictPythonResponse = {
+  features?: Record<string, number>;
   predictions?: unknown;
   warning?: string;
 };
@@ -16,6 +17,10 @@ type PredictFromBboxInput = {
 type PredictFromBboxResult = {
   predictedYieldTonHa: number;
   warning?: string;
+};
+
+export type PredictFromBboxDetailedResult = PredictFromBboxResult & {
+  features: Record<string, number>;
 };
 
 type ValuationInput = {
@@ -45,7 +50,23 @@ function parsePredictionValue(raw: unknown) {
   return null;
 }
 
-export async function predictYieldFromBbox(input: PredictFromBboxInput): Promise<PredictFromBboxResult> {
+function parseFeatures(raw: unknown) {
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+
+  const output: Record<string, number> = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      output[key] = value;
+    }
+  }
+
+  return output;
+}
+
+async function callPredictionApi(input: PredictFromBboxInput) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -74,7 +95,14 @@ export async function predictYieldFromBbox(input: PredictFromBboxInput): Promise
   if (!response.ok) {
     throw new Error(payload.error ?? `Prediction API error: ${JSON.stringify(payload)}`);
   }
+
   console.log(`[PREDICTION] Received response from prediction API:`, payload);
+
+  return payload;
+}
+
+export async function predictYieldFromBbox(input: PredictFromBboxInput): Promise<PredictFromBboxResult> {
+  const payload = await callPredictionApi(input);
   const predictedYieldTonHa = parsePredictionValue(payload.predictions);
 
   if (predictedYieldTonHa === null) {
@@ -84,6 +112,21 @@ export async function predictYieldFromBbox(input: PredictFromBboxInput): Promise
   return {
     predictedYieldTonHa: Number(predictedYieldTonHa.toFixed(3)),
     warning: payload.warning,
+  };
+}
+
+export async function predictYieldWithFeaturesFromBbox(input: PredictFromBboxInput): Promise<PredictFromBboxDetailedResult> {
+  const payload = await callPredictionApi(input);
+  const predictedYieldTonHa = parsePredictionValue(payload.predictions);
+
+  if (predictedYieldTonHa === null) {
+    throw new Error("La API de prediccion devolvio un formato invalido.");
+  }
+
+  return {
+    predictedYieldTonHa: Number(predictedYieldTonHa.toFixed(3)),
+    warning: payload.warning,
+    features: parseFeatures(payload.features),
   };
 }
 
