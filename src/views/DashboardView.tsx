@@ -65,6 +65,8 @@ export default function DashboardView({ filter }: { filter?: string }) {
   const [search, setSearch] = useState("");
   const [activeAlerts, setActiveAlerts] = useState<WeatherAlertItem[]>([]);
   const [isPersistingOrder, setIsPersistingOrder] = useState(false);
+  const [climateRiskScoreByFieldId, setClimateRiskScoreByFieldId] = useState<Record<string, number | null>>({});
+  const [isLoadingClimateRiskFilter, setIsLoadingClimateRiskFilter] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,40 +113,135 @@ export default function DashboardView({ filter }: { filter?: string }) {
     return Object.fromEntries(entries);
   }, [fields, activeAlerts]);
 
-  const filtered = useMemo(() => {
-    let result = fields;
+  const searchableNameById = useMemo(() => {
+    return new Map(fields.map((field) => [field.id, field.name.toLowerCase()]));
+  }, [fields]);
 
-    if (search) {
-      result = result.filter((field) => field.name.toLowerCase().includes(search.toLowerCase()));
+  const fieldsByFilter = useMemo(() => {
+    return {
+      recent: [...fields].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      top: [...fields].sort((a, b) => b.monthlyRevenueChange - a.monthlyRevenueChange),
+      zone: [...fields].sort((a, b) => a.zone.localeCompare(b.zone)),
+    };
+  }, [fields]);
+
+  const missingClimateRiskFieldIds = useMemo(() => {
+    if (filter !== "risk") {
+      return [] as string[];
     }
+
+    return fields
+      .map((field) => field.id)
+      .filter((fieldId) => !(fieldId in climateRiskScoreByFieldId));
+  }, [filter, fields, climateRiskScoreByFieldId]);
+
+  useEffect(() => {
+    if (filter !== "risk" || missingClimateRiskFieldIds.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadMissingClimateRiskScores() {
+      setIsLoadingClimateRiskFilter(true);
+
+      try {
+        const settled = await Promise.allSettled(
+          missingClimateRiskFieldIds.map(async (fieldId) => {
+            const response = await fetch(`/api/fields/${fieldId}/weather`, {
+              credentials: "include",
+            });
+
+            if (!response.ok) {
+              return [fieldId, null] as const;
+            }
+
+            const payload = (await response.json().catch(() => ({}))) as {
+              data?: {
+                metrics?: {
+                  riskScore?: number;
+                };
+              } | null;
+            };
+
+            const riskScore = payload.data?.metrics?.riskScore;
+
+            return [fieldId, typeof riskScore === "number" ? riskScore : null] as const;
+          }),
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        const patch = Object.fromEntries(
+          settled.map((item, index) => {
+            if (item.status === "fulfilled") {
+              return item.value;
+            }
+
+            return [missingClimateRiskFieldIds[index], null] as const;
+          }),
+        );
+
+        setClimateRiskScoreByFieldId((prev) => ({
+          ...prev,
+          ...patch,
+        }));
+      } finally {
+        if (!cancelled) {
+          setIsLoadingClimateRiskFilter(false);
+        }
+      }
+    }
+
+    void loadMissingClimateRiskScores();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, missingClimateRiskFieldIds]);
+
+  const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    let baseList: FieldProfile[];
 
     switch (filter) {
       case "recent":
-        result = [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        baseList = fieldsByFilter.recent;
         break;
       case "top":
-        result = [...result].sort((a, b) => b.monthlyRevenueChange - a.monthlyRevenueChange);
+        baseList = fieldsByFilter.top;
         break;
       case "risk":
-        result = result.filter(
-          (field) => field.risk.climate === "Alto" || field.risk.market === "Alto" || field.risk.logistics === "Alto",
-        );
+        baseList = fields.filter((field) => {
+          const climateRiskScore = climateRiskScoreByFieldId[field.id];
+
+          return typeof climateRiskScore === "number" && climateRiskScore > 75;
+        });
         break;
       case "zone":
-        result = [...result].sort((a, b) => a.zone.localeCompare(b.zone));
+        baseList = fieldsByFilter.zone;
         break;
       default:
+        baseList = fields;
         break;
     }
 
-    return result;
-  }, [fields, search, filter]);
+    if (!normalizedSearch) {
+      return baseList;
+    }
+
+    return baseList.filter((field) => (searchableNameById.get(field.id) ?? "").includes(normalizedSearch));
+  }, [fields, fieldsByFilter, filter, search, searchableNameById, climateRiskScoreByFieldId]);
 
   const isRiskFilter = filter === "risk";
   const reorderEnabled = !filter && search.trim().length === 0;
   const canDragReorder = reorderEnabled && filtered.length > 1;
   const hasAnyFields = fields.length > 0;
-  const showHealthyRiskState = isRiskFilter && hasAnyFields && filtered.length === 0 && search.trim().length === 0;
+  const showHealthyRiskState =
+    isRiskFilter && hasAnyFields && filtered.length === 0 && search.trim().length === 0 && !isLoadingClimateRiskFilter;
   const showAddFieldDialog = !(showHealthyRiskState);
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -244,6 +341,10 @@ export default function DashboardView({ filter }: { filter?: string }) {
         </p>
       ) : null}
 
+      {isRiskFilter && isLoadingClimateRiskFilter ? (
+        <p className="text-xs text-muted-foreground">Calculando riesgo climatico real para filtrar por {">"} 75...</p>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
         {canDragReorder ? (
           <DndContext
@@ -285,7 +386,7 @@ export default function DashboardView({ filter }: { filter?: string }) {
               <ShieldCheck className="mt-0.5 h-5 w-5 text-success" />
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-success">Todo en orden</p>
-                <p className="text-sm text-foreground/80">No hay campos en alto riesgo. Todo en orden!!</p>
+                <p className="text-sm text-foreground/80">No hay campos con riesgo climatico mayor a 75. Todo en orden!!</p>
               </div>
             </div>
           </div>

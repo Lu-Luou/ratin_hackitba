@@ -5,7 +5,7 @@ import { MenuContainer, MenuItem } from "@/components/ui/fluid-menu";
 const filters = [
   { title: "Recientes", icon: Clock, value: "recent" },
   { title: "Top rendimiento", icon: TrendingUp, value: "top" },
-  { title: "Alto riesgo", icon: AlertTriangle, value: "risk" },
+  { title: "Riesgo climatico > 75", icon: AlertTriangle, value: "risk" },
   { title: "Por zona", icon: MapPin, value: "zone" },
 ];
 
