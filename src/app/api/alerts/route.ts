@@ -128,6 +128,14 @@ async function resolveAlerts(userId: string, includeMocks: boolean): Promise<{ d
     take: 30,
   });
 
+  // Only generate mock alerts if user has fields
+  if (fields.length === 0) {
+    return {
+      data: [],
+      source: "mock",
+    };
+  }
+
   return {
     data: buildMockWeatherAlerts(fields),
     source: "mock",
