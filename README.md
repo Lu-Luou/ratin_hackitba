@@ -1,194 +1,281 @@
-# CampoAI Hackitba
+# SoyGuardian
 
-Hola
-Base inicial con:
+SoyGuardian es una herramienta para asistir a prestamistas y aseguradoras del sector agricola. Combina prediccion de rendimiento con IA, senales meteorologicas y satelitales (NASA/CONAE), y una evaluacion integral de riesgo para lotes especificos.
 
-- Next.js (App Router)
-- TypeScript
-- Supabase (`@supabase/supabase-js` + `@supabase/ssr`)
-- Auth con email/password (login, signup, logout y callback)
-- Lista para deploy en Vercel
+## Que Resuelve
 
-## 1) Instalar dependencias
+El problema en el agro-fintech hoy:
 
-```bash
-npm install
-```
+- Muchas evaluaciones de riesgo se hacen por region y no por lote.
+- Gran parte de la produccion ocurre en campos alquilados, por lo que muchos productores quedan fuera del credito tradicional por falta de garantia real.
+- Los peritajes presenciales son lentos y caros, lo que frena colocacion de capital.
 
-## 2) Configurar Supabase
+La propuesta de SoyGuardian:
 
-1. Crea un proyecto en Supabase.
-1. Copia la URL del proyecto y la anon key.
-1. Crea `.env.local` a partir de `.env.example`.
+- Reducir incertidumbre con monitoreo continuo por lote.
+- Priorizar y hacer mas eficientes las visitas de peritos.
+- Mejorar precision en underwriting para bancos/aseguradoras.
+- Habilitar acceso al credito para productores sin activos tradicionales.
+
+## What It Does
+
+- Authenticates users with Supabase and keeps business data in PostgreSQL via Prisma.
+- Manages fields (location, bbox, hectares, costs, risk, repayment profile).
+- Runs yield prediction from satellite signals through a Python model endpoint.
+- Calculates spot/futures valuation using soy market pricing.
+- Generates lender-ready field context and optional PDF reports.
+- Runs batch credit decisions for admins with reason codes and confidence.
+- Supports nightly prediction refresh using a cron-protected endpoint.
+
+## Architecture
+
+- Frontend/API: Next.js App Router + TypeScript.
+- Authentication/session: Supabase.
+- Application data/CRUD: Prisma (single source of truth for business entities).
+- ML inference: Python endpoint in api/py/predict.py.
+- Market/weather/report services: modularized under src/lib.
+
+Data responsibility split:
+
+- Supabase: identity/session.
+- Prisma: application models and business reads/writes.
+
+## Tech Stack
+
+- Next.js 16, React 19, TypeScript
+- Prisma 7 + PostgreSQL (Supabase)
+- Zod validation
+- Tailwind CSS 4 + Radix UI
+- Python (scikit-learn, pandas, Sentinel Hub SDK)
+
+## Prerequisites
+
+- Node.js 20+
+- npm
+- PostgreSQL database (Supabase recommended)
+- Python 3.10+ (for local ML endpoint workflows)
+
+## Environment Variables
+
+Start from .env.example and create .env.local (or .env).
 
 ```bash
 cp .env.example .env.local
 ```
 
-Variables:
+Required:
 
 ```env
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-SUPABASE_SERVICE_ROLE_KEY=...
+
+# Supabase + Prisma
 DATABASE_URL=postgresql://postgres:password@db.your-project-ref.supabase.co:5432/postgres
+DATABASE_URL_POOLER=postgresql://postgres.your-project-ref:password@aws-0-your-region.pooler.supabase.com:6543/postgres?sslmode=require
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Public Supabase keys (recommended for client auth flows)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Python prediction dependencies
+SENTINEL_HUB_CLIENT_ID=your-sentinel-hub-client-id
+SENTINEL_HUB_CLIENT_SECRET=your-sentinel-hub-client-secret
+
+# Cron protection
+CRON_SECRET=change-me
 ```
 
-Configura en Supabase (Authentication > URL Configuration):
-
-- Site URL: `http://localhost:3000`
-- Redirect URL adicional: `http://localhost:3000/auth/callback`
-
-## 3) Crear tabla de ejemplo (opcional, recomendada)
-
-En Supabase SQL Editor ejecuta:
-
-```sql
-create table if not exists public.todos (
-  id bigint generated always as identity primary key,
-  title text not null,
-  created_at timestamptz not null default now()
-);
-
-alter table public.todos enable row level security;
-
-create policy "public can read todos"
-on public.todos
-for select
-to anon
-using (true);
-```
-
-Inserta uno de prueba:
-
-```sql
-insert into public.todos (title) values ('Primer todo desde Supabase');
-```
-
-## 4) Levantar Supabase local (opcional, recomendado)
-
-Si prefieres correr Supabase en tu maquina:
-
-1. Instala la CLI local en el proyecto:
-
-```bash
-npm install -D supabase
-```
-
-1. Inicializa (una sola vez):
-
-```bash
-npx supabase init
-```
-
-1. Levanta los servicios (requiere Docker):
-
-```bash
-npx supabase start
-```
-
-1. Obtiene URL y keys:
-
-```bash
-npx supabase status
-```
-
-Con esos datos, usa en `.env.local` algo como:
+Optional:
 
 ```env
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-SUPABASE_SERVICE_ROLE_KEY=... # from supabase status
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+# If your Python inference runs separately in local/dev
+PYTHON_API_URL=http://localhost:5000
 ```
 
-Para apagarlo:
+## Local Setup
+
+1. Install dependencies.
 
 ```bash
-npx supabase stop
+npm install
 ```
 
-## 5) Correr la app en local
+2. Generate Prisma client (also runs on postinstall).
+
+```bash
+npx prisma generate
+```
+
+3. Apply database migrations.
+
+```bash
+npx prisma migrate deploy
+```
+
+4. Run the app.
 
 ```bash
 npm run dev
 ```
 
-Abre `http://localhost:3000`.
+5. Open:
 
-Flujo auth:
+- http://localhost:3000
+- Home route auto-redirects to dashboard when authenticated.
 
-- `/auth` para iniciar sesion o registrarte.
-- Confirmacion de email via `/auth/callback`.
-- En home veras estado de sesion y boton de logout.
+## Running The Python Prediction Endpoint
 
-## 6) Deploy en Vercel
+This repository includes a Vercel Python handler at api/py/predict.py.
 
-1. Sube el repo a GitHub.
-1. Importa el proyecto en Vercel.
-1. En Project Settings > Environment Variables agrega:
+Options:
 
-```env
-NEXT_PUBLIC_SITE_URL=https://tu-app.vercel.app
-SUPABASE_SERVICE_ROLE_KEY=... # solo si lo necesitas en server
-DATABASE_URL=postgresql://postgres:password@db.your-project-ref.supabase.co:5432/postgres
+- Use Vercel routing for local full-stack simulation (recommended for parity).
+- Or run a separate Python service and set PYTHON_API_URL.
+
+Prediction endpoint contract:
+
+- POST /py/predict
+- Body:
+
+```json
+{
+  "bbox": [-62.45, -27.65, -62.44, -27.64],
+  "start_date": "2023-11-01",
+  "end_date": "2024-04-30"
+}
 ```
 
-1. Deploy.
+## Main Routes
 
-Ademas, en Supabase agrega el dominio de Vercel en Authentication > URL Configuration:
+Pages:
 
-- Site URL: `https://tu-app.vercel.app`
-- Redirect URL: `https://tu-app.vercel.app/auth/callback`
+- / (redirects to /dashboard if authenticated, otherwise /home)
+- /home
+- /auth
+- /login
+- /signup
+- /dashboard
+- /assistant
 
-## Estructura relevante
+## API Overview
 
-- `src/lib/supabase/client.ts`: cliente para browser/client components.
-- `src/lib/supabase/server.ts`: cliente para server components/route handlers.
-- `src/lib/supabase/middleware.ts`: refresco de sesion en middleware.
-- `src/middleware.ts`: hook global para auth cookies.
-- `src/app/auth/page.tsx`: pantalla de login/registro.
-- `src/app/auth/actions.ts`: server actions para sign in/up/out.
-- `src/app/auth/callback/route.ts`: confirmacion de email y exchange de sesion.
-- `src/types/database.ts`: tipos base de la DB (editable segun tu esquema).
+Auth:
 
-## MCP en VS Code
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
 
-Se agrego configuracion en `.vscode/mcp.json` con estos servers:
+Fields and analytics:
 
-- `memory`: server local en `mcp/memory-server.mjs` (persistencia en `mcp/memory.json`).
-- `postgres`: `@modelcontextprotocol/server-postgres` via `npx`.
-- `supabase`: `@supabase/mcp-server-supabase` via `npx`.
-- `testing`: server local en `mcp/testing-server.mjs`.
+- GET /api/fields
+- POST /api/fields
+- PUT /api/fields/:fieldId
+- DELETE /api/fields/:fieldId
+- POST /api/fields/reorder
+- GET /api/fields/:fieldId/prediction
+- POST /api/fields/:fieldId/prediction
+- GET /api/fields/:fieldId/weather
 
-### 1) Configurar credenciales
+Pricing and predictions:
 
-Edita `.vscode/mcp.json` y reemplaza:
+- GET /api/pricing/soy
+- GET /api/predict
+- POST /api/predict
 
-- `postgresql://USER:PASSWORD@localhost:5432/DB_NAME`
-- `TU_SUPABASE_TOKEN`
+Reports:
 
-Opcional para testing:
+- GET /api/fields/:fieldId/report/context
+- POST /api/fields/:fieldId/report/generate
 
-- `TEST_COMMAND` (por defecto: `npm test --if-present`)
+Alerts:
 
-### 2) Verificar prerequisitos
+- GET /api/alerts
+- POST /api/alerts
 
-- Node.js disponible en PATH.
-- Para `postgres` y `supabase` no hace falta instalacion global si usas `npx`.
+Admin credit engine:
 
-Si prefieres instalar global:
+- POST /api/admin/credit-decisions/batch
+- GET /api/admin/credit-decisions
+- GET /api/admin/users
+- PATCH /api/admin/users/:id/role
+
+Cron:
+
+- GET /api/cron/nightly-predictions
+- Requires x-cron-secret or Bearer token matching CRON_SECRET.
+
+## Fintech Hackathon Value
+
+- Explainable underwriting via score + reason codes.
+- Portfolio-scale batch decisions with run metadata.
+- Real-time-ish monitoring through alerts and weather risk.
+- Lender output through generated field reports (JSON/PDF).
+
+## Pitch Deck Script (4 Diapositivas)
+
+Puedes usar este guion tal cual para la demo:
+
+1. Diapositiva 1 - Presentacion
+- Hola, soy Tomas del grupo null-profits y voy a presentar nuestro proyecto.
+- Lo nombramos SoyGuardian.
+- Es una herramienta dirigida a empresas financieras como bancos y aseguradoras vinculadas al sector agricola.
+
+2. Diapositiva 2 - Problema
+- La soja es un pilar de la economia argentina, pero la evaluacion de riesgo actual tiene fricciones.
+- Muchas aseguradoras evaluan por region, sin diferenciar calidad y gestion de cada lote.
+- Cerca del 70% de la produccion se realiza en campos alquilados, por lo que muchos productores no pueden usar escritura como garantia.
+- Resultado: auditorias lentas, costos operativos altos en peritajes presenciales y capital sin colocar por miedo.
+
+3. Diapositiva 3 - Oportunidad
+- Un peritaje presencial puede costar entre 2 y 5 USD por hectarea y requiere dias de viaje.
+- En grandes extensiones, el costo escala muy rapido.
+- Gran parte del financiamiento del agro ocurre fuera de la banca tradicional.
+- Existe un mercado potencial multimillonario que no se captura por falta de herramientas de evaluacion precisa y escalable.
+
+4. Diapositiva 4 - Solucion
+- Desarrollamos una plataforma web intuitiva con IA que procesa datos meteorologicos y satelitales (NASA/CONAE).
+- El modelo de prediccion actual alcanza aproximadamente 72% de precision.
+- Permite supervisar el estado de lotes antes de enviar un perito, con costo marginal por hectarea muy bajo.
+- Objetivo: peritaje mas eficiente, mejor decision de riesgo y apertura de nuevas lineas de negocio para bancos y aseguradoras.
+
+## Deployment Notes
+
+- Deploy to Vercel.
+- Keep environment variables in Vercel Project Settings.
+- Ensure Supabase Auth URL config includes:
+  - Site URL: your deployed domain
+  - Redirect URL: your deployed domain/auth/callback
+- Apply Prisma migrations in the target DB before testing features.
+
+## Useful Commands
 
 ```bash
-npm install -g @modelcontextprotocol/server-postgres @supabase/mcp-server-supabase
+# Dev server
+npm run dev
+
+# Lint
+npm run lint
+
+# Build
+npm run build
+
+# Start production build
+npm run start
 ```
 
-### 3) Iniciar los MCP
+## Project Structure (Key Files)
 
-1. Abre `/.vscode/mcp.json`.
-1. En Copilot Chat, usa **Start MCP Servers**.
+- src/lib/prisma.ts: shared Prisma client.
+- prisma/schema.prisma: data model.
+- src/lib/auth/session.ts: session and role checks.
+- src/lib/credit/engine.ts: credit scoring policy and reason codes.
+- src/lib/prediction/predictClient.ts: prediction + valuation orchestration.
+- src/app/api/cron/nightly-predictions/route.ts: scheduled prediction refresh.
+- api/py/predict.py: Python inference endpoint.
 
-### 4) Ejemplos de uso
+## Known Operational Tips
 
-- "use postgres MCP to list tables"
-- "use supabase MCP to get users"
-- "use memory MCP to store decision: usamos supabase auth"
-- "use testing MCP to run tests"
+- Prefer DATABASE_URL_POOLER for Prisma on networks where IPv6 can fail.
+- If a table is missing at runtime, run migrations first before changing handlers.
+- Keep business CRUD in Prisma, not direct Supabase table writes, for consistency.
