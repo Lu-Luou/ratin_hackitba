@@ -1,6 +1,6 @@
 import type { FieldProfile } from "@/types/field";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFieldWeather } from "@/hooks/use-field-weather";
 import { WeatherIndicator } from "@/components/field/WeatherIndicator";
@@ -16,7 +16,6 @@ export function FieldCard({
   activeAlertCount?: number;
   isDragging?: boolean;
 }) {
-  const positive = field.monthlyRevenueChange >= 0;
   const { data: weather, loading: weatherLoading, error: weatherError } = useFieldWeather(field.id);
 
   return (
@@ -41,18 +40,6 @@ export function FieldCard({
               </span>
             ) : null}
           </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {positive ? (
-            <TrendingUp className="h-4 w-4 text-success" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          )}
-          <span className={cn("text-sm font-medium", positive ? "text-success" : "text-destructive")}>
-            {positive ? "+" : ""}{field.monthlyRevenueChange}%
-          </span>
-          <span className="text-xs text-muted-foreground">rev. mensual</span>
         </div>
 
         <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs min-h-20">
