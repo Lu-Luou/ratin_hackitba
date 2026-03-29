@@ -19,10 +19,19 @@ type LenderReportData = {
     model: string;
     usedWebSearch: boolean;
   };
+  headline: string;
+  underwritingVerdict: "APPROVE_WITH_CONDITIONS" | "WATCHLIST" | "DECLINE";
   executiveSummary: string;
   riskFlags: string[];
   recommendation: string;
-  narrative: string;
+  narrative: string[];
+  financialHighlights: string[];
+  scenarioAnalysis: {
+    baseCase: string;
+    downsideCase: string;
+    upsideCase: string;
+  };
+  actions: string[];
   citations: Array<{
     title: string;
     url: string;
@@ -36,6 +45,80 @@ function riskBadgeVariant(level: string): "default" | "secondary" | "destructive
   if (level === "Bajo") return "secondary";
   if (level === "Medio") return "default";
   return "destructive";
+}
+
+function verdictBadgeVariant(verdict: LenderReportData["underwritingVerdict"]): "default" | "secondary" | "destructive" {
+  if (verdict === "APPROVE_WITH_CONDITIONS") return "secondary";
+  if (verdict === "WATCHLIST") return "default";
+  return "destructive";
+}
+
+function verdictLabel(verdict: LenderReportData["underwritingVerdict"]) {
+  if (verdict === "APPROVE_WITH_CONDITIONS") return "Aprobar con condiciones";
+  if (verdict === "WATCHLIST") return "Watchlist";
+  return "Declinar";
+}
+
+function normalizeReportData(raw: unknown): LenderReportData | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const candidate = raw as Partial<LenderReportData>;
+
+  if (
+    !candidate.provider ||
+    typeof candidate.provider.name !== "string" ||
+    typeof candidate.provider.model !== "string" ||
+    typeof candidate.provider.usedWebSearch !== "boolean" ||
+    typeof candidate.executiveSummary !== "string" ||
+    typeof candidate.recommendation !== "string" ||
+    !Array.isArray(candidate.riskFlags) ||
+    typeof candidate.generatedAt !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    provider: candidate.provider,
+    headline: typeof candidate.headline === "string" ? candidate.headline : "Resumen de crédito agrícola",
+    underwritingVerdict:
+      candidate.underwritingVerdict === "APPROVE_WITH_CONDITIONS" ||
+      candidate.underwritingVerdict === "WATCHLIST" ||
+      candidate.underwritingVerdict === "DECLINE"
+        ? candidate.underwritingVerdict
+        : "WATCHLIST",
+    executiveSummary: candidate.executiveSummary,
+    riskFlags: candidate.riskFlags.filter((item): item is string => typeof item === "string"),
+    recommendation: candidate.recommendation,
+    narrative: Array.isArray(candidate.narrative)
+      ? candidate.narrative.filter((item): item is string => typeof item === "string")
+      : [],
+    financialHighlights: Array.isArray(candidate.financialHighlights)
+      ? candidate.financialHighlights.filter((item): item is string => typeof item === "string")
+      : [],
+    scenarioAnalysis:
+      candidate.scenarioAnalysis &&
+      typeof candidate.scenarioAnalysis.baseCase === "string" &&
+      typeof candidate.scenarioAnalysis.downsideCase === "string" &&
+      typeof candidate.scenarioAnalysis.upsideCase === "string"
+        ? candidate.scenarioAnalysis
+        : {
+            baseCase: "No disponible.",
+            downsideCase: "No disponible.",
+            upsideCase: "No disponible.",
+          },
+    actions: Array.isArray(candidate.actions)
+      ? candidate.actions.filter((item): item is string => typeof item === "string")
+      : [],
+    citations: Array.isArray(candidate.citations)
+      ? candidate.citations.filter(
+          (item): item is { title: string; url: string } =>
+            !!item && typeof item === "object" && typeof item.title === "string" && typeof item.url === "string",
+        )
+      : [],
+    generatedAt: candidate.generatedAt,
+  };
 }
 
 export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: () => void }) {
@@ -150,9 +233,9 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
         throw new Error(payload?.error ?? "No se pudo generar el reporte LLM.");
       }
 
-      const report = payload?.data?.report as LenderReportData | undefined;
+      const report = normalizeReportData(payload?.data?.report);
 
-      if (!report || typeof report.executiveSummary !== "string") {
+      if (!report) {
         throw new Error("El backend devolvio un reporte invalido.");
       }
 
@@ -414,13 +497,13 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
 
         {actionError ? <p className="text-sm text-destructive">{actionError}</p> : null}
 
-        <Card>
+        <Card className="border-border/70 bg-gradient-to-br from-background via-background to-muted/20 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <CardTitle className="text-sm font-medium text-muted-foreground">Reporte LLM para Banco</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Reporte Crediticio Inteligente</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Resume Geo, Yield, NDVI, bandas, clima y señales de riesgo para underwriting.
+                  Análisis interpolado por LLM con señales Geo, Yield, NDVI, bandas espectrales, clima y riesgo financiero.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -477,23 +560,37 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
             </div>
 
             {reportData ? (
-              <div className="space-y-3 rounded-md border p-3">
+              <div className="space-y-4 rounded-md border bg-card/70 p-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline">Proveedor: {reportData.provider.name}</Badge>
-                  <Badge variant="outline">Modelo: {reportData.provider.model}</Badge>
+                  <Badge variant={verdictBadgeVariant(reportData.underwritingVerdict)}>{verdictLabel(reportData.underwritingVerdict)}</Badge>
+                  <Badge variant="outline">{reportData.provider.name}</Badge>
+                  <Badge variant="outline">{reportData.provider.model}</Badge>
                   <Badge variant={reportData.provider.usedWebSearch ? "default" : "secondary"}>
                     {reportData.provider.usedWebSearch ? "Con web search" : "Solo datos internos"}
                   </Badge>
                 </div>
 
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground">Executive Summary</p>
-                  <p className="text-sm leading-relaxed">{reportData.executiveSummary}</p>
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-base font-semibold text-foreground">{reportData.headline}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{reportData.executiveSummary}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground">Recomendación</p>
-                  <p className="text-sm leading-relaxed">{reportData.recommendation}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Highlights Financieros</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                    {reportData.financialHighlights.map((item, index) => (
+                      <li key={`${item}-${index}`}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Narrativa de Riesgo</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                    {reportData.narrative.map((item, index) => (
+                      <li key={`${item}-${index}`}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
 
                 {reportData.riskFlags.length > 0 ? (
@@ -502,6 +599,55 @@ export function FieldDetail({ field, onBack }: { field: FieldProfile; onBack: ()
                     <ul className="mt-1 list-disc pl-5 text-sm">
                       {reportData.riskFlags.map((flag, index) => (
                         <li key={`${flag}-${index}`}>{flag}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <div className="rounded-md border bg-background/80 p-3">
+                    <p className="text-xs font-semibold text-muted-foreground">Escenario Base</p>
+                    <p className="mt-1 text-sm leading-relaxed">{reportData.scenarioAnalysis.baseCase}</p>
+                  </div>
+                  <div className="rounded-md border bg-background/80 p-3">
+                    <p className="text-xs font-semibold text-muted-foreground">Escenario Bajista</p>
+                    <p className="mt-1 text-sm leading-relaxed">{reportData.scenarioAnalysis.downsideCase}</p>
+                  </div>
+                  <div className="rounded-md border bg-background/80 p-3">
+                    <p className="text-xs font-semibold text-muted-foreground">Escenario Alcista</p>
+                    <p className="mt-1 text-sm leading-relaxed">{reportData.scenarioAnalysis.upsideCase}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Acciones Recomendadas</p>
+                  <ul className="mt-1 list-decimal space-y-1 pl-5 text-sm">
+                    {reportData.actions.map((item, index) => (
+                      <li key={`${item}-${index}`}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Recomendación Ejecutiva</p>
+                  <p className="text-sm leading-relaxed">{reportData.recommendation}</p>
+                </div>
+
+                {reportData.citations.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Fuentes Externas</p>
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {reportData.citations.slice(0, 6).map((citation, index) => (
+                        <li key={`${citation.url}-${index}`}>
+                          <a
+                            href={citation.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            {index + 1}. {citation.title}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   </div>
